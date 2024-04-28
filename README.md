@@ -116,22 +116,22 @@ uvicorn main:app --host localhost --port 8080
 
 <!-- links -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/shaojintian/Best_README_template.svg?style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/felix-liuyj/base-fastapi-template.svg?style=flat-square
 
-[contributors-url]: https://github.com/felix-liuyj/base-fastapi-templategraphs/contributors
+[contributors-url]: https://github.com/felix-liuyj/base-fastapi-template/graphs/contributors
 
-[forks-shield]: https://img.shields.io/github/forks/shaojintian/Best_README_template.svg?style=flat-square
+[forks-shield]: https://img.shields.io/github/forks/felix-liuyj/base-fastapi-template.svg?style=flat-square
 
-[forks-url]: https://github.com/felix-liuyj/base-fastapi-templatenetwork/members
+[forks-url]: https://github.com/felix-liuyj/base-fastapi-template/network/members
 
-[stars-shield]: https://img.shields.io/github/stars/shaojintian/Best_README_template.svg?style=flat-square
+[stars-shield]: https://img.shields.io/github/stars/felix-liuyj/base-fastapi-template.svg?style=flat-square
 
-[stars-url]: https://github.com/felix-liuyj/base-fastapi-templatestargazers
+[stars-url]: https://github.com/felix-liuyj/base-fastapi-template/stargazers
 
-[issues-shield]: https://img.shields.io/github/issues/shaojintian/Best_README_template.svg?style=flat-square
+[issues-shield]: https://img.shields.io/github/issues/felix-liuyj/base-fastapi-template.svg?style=flat-square
 
-[issues-url]: https://img.shields.io/github/issues/shaojintian/Best_README_template.svg
+[issues-url]: https://img.shields.io/github/issues/felix-liuyj/base-fastapi-template.svg
 
-[license-shield]: https://img.shields.io/github/license/shaojintian/Best_README_template.svg?style=flat-square
+[license-shield]: https://img.shields.io/github/license/felix-liuyj/base-fastapi-template.svg?style=flat-square
 
-[license-url]: https://github.com/felix-liuyj/base-fastapi-templateblob/master/LICENSE.txt
+[license-url]: https://github.com/felix-liuyj/base-fastapi-template/blob/master/LICENSE.txt
