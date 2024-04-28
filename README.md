@@ -118,15 +118,15 @@ uvicorn main:app --host localhost --port 8080
 
 [contributors-shield]: https://img.shields.io/github/contributors/shaojintian/Best_README_template.svg?style=flat-square
 
-[contributors-url]: https://github.com/shaojintian/Best_README_template/graphs/contributors
+[contributors-url]: https://github.com/felix-liuyj/base-fastapi-templategraphs/contributors
 
 [forks-shield]: https://img.shields.io/github/forks/shaojintian/Best_README_template.svg?style=flat-square
 
-[forks-url]: https://github.com/shaojintian/Best_README_template/network/members
+[forks-url]: https://github.com/felix-liuyj/base-fastapi-templatenetwork/members
 
 [stars-shield]: https://img.shields.io/github/stars/shaojintian/Best_README_template.svg?style=flat-square
 
-[stars-url]: https://github.com/shaojintian/Best_README_template/stargazers
+[stars-url]: https://github.com/felix-liuyj/base-fastapi-templatestargazers
 
 [issues-shield]: https://img.shields.io/github/issues/shaojintian/Best_README_template.svg?style=flat-square
 
@@ -134,4 +134,4 @@ uvicorn main:app --host localhost --port 8080
 
 [license-shield]: https://img.shields.io/github/license/shaojintian/Best_README_template.svg?style=flat-square
 
-[license-url]: https://github.com/shaojintian/Best_README_template/blob/master/LICENSE.txt
+[license-url]: https://github.com/felix-liuyj/base-fastapi-templateblob/master/LICENSE.txt
