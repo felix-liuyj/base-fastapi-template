@@ -1,0 +1,32 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+uvicorn = "*"
+pydantic = "*"
+bcrypt = "*"
+pycryptodome = "*"
+fastapi = "*"
+pyjwt = "*"
+motor = "*"
+beanie = "*"
+jinja2 = "*"
+pandas = "*"
+rich = "*"
+httpx = "*"
+web3 = "*"
+base58 = "*"
+aiokafka = "*"
+redis = "*"
+fastapi-cache2 = "*"
+python-dotenv = "*"
+python-dateutil = "*"
+python-jenkins = "*"
+email-validator = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"

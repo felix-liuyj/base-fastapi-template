@@ -1,0 +1,12 @@
+version: '3'
+services:
+  python:
+    container_name: PROJECT_NAME
+    image: PROJECT_NAME:latest
+    hostname: "PROJECT_NAME"
+    ports:
+      - "EXPOSE_PORT:8000"
+    network_mode: bridge
+    environment:
+      TZ: Asia/Shanghai
+    restart: always

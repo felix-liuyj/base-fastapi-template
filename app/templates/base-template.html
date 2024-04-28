@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Email</title>
+    <style media="all">
+        @media all {
+            code {
+                color: #c7254e;
+                background-color: #f9f2f4;
+                border-radius: 2px;
+                padding: .2em .3em;
+                margin: 0;
+                font-size: 85%;
+            }
+
+            table {
+                border-collapse: separate;
+                mso-table-lspace: 0;
+                mso-table-rspace: 0;
+            }
+
+            .btn-primary table td:hover {
+                background-color: #ec0867 !important;
+            }
+
+            .btn-primary a:hover {
+                background-color: #ec0867 !important;
+                border-color: #ec0867 !important;
+            }
+
+            .text-line {
+                font-family: Helvetica, sans-serif;
+                font-size: 16px;
+                font-weight: normal;
+                margin: 0 0 16px;
+            }
+
+            .td-cell {
+                font-family: Helvetica, sans-serif;
+                font-size: 16px;
+                vertical-align: top;
+            }
+        }
+
+        @media only screen and (max-width: 640px) {
+            .main p,
+            .main td,
+            .main span {
+                font-size: 16px !important;
+            }
+
+            .wrapper {
+                padding: 8px !important;
+            }
+
+            .main {
+                border-left-width: 0 !important;
+                border-radius: 0 !important;
+                border-right-width: 0 !important;
+            }
+
+            .btn table {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            .btn a {
+                font-size: 16px !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
+
+        @media all {
+
+            .apple-link a {
+                color: inherit !important;
+                font-family: inherit !important;
+                font-size: inherit !important;
+                font-weight: inherit !important;
+                line-height: inherit !important;
+                text-decoration: none !important;
+            }
+
+            #MessageViewBody a {
+                color: inherit;
+                text-decoration: none;
+                font-size: inherit;
+                font-family: inherit;
+                font-weight: inherit;
+                line-height: inherit;
+            }
+        }
+    </style>
+</head>
+<body style="font-family: Helvetica, sans-serif; -webkit-font-smoothing: antialiased; font-size: 16px; line-height: 1.3; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; margin: 0; padding: 0;">
+<table role="presentation" class="main"
+       style="background: #ffffff; border: 1px solid #eaebed; border-radius: 16px; width: 100%;">
+    <tr>
+        <td class="wrapper td-cell"
+            style=" box-sizing: border-box; padding: 24px;">
+            {% block content %}
+            {% endblock %}
+        </td>
+    </tr>
+</table>
+</body>
+</html>
