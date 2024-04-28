@@ -17,7 +17,7 @@
     <img src="https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png" alt="Logo" width="500" height="90">
   </a>
 
-  <h3 align="center">Base FastAPI Template</h3>
+<h3 align="center">Base FastAPI Template</h3>
   <p align="center">
     Backend Template For FastAPI
     <br />
@@ -112,8 +112,24 @@ uvicorn main:app --host localhost --port 8080
 - [python-jenkins = "*"](https://pypi.org/project/python-jenkins)
 - [email-validator = "*"](https://pypi.org/project/email-validator)
 
+<!-- links -->
 
+[contributors-shield]: https://img.shields.io/github/contributors/shaojintian/Best_README_template.svg?style=flat-square
 
+[contributors-url]: https://github.com/shaojintian/Best_README_template/graphs/contributors
 
+[forks-shield]: https://img.shields.io/github/forks/shaojintian/Best_README_template.svg?style=flat-square
 
+[forks-url]: https://github.com/shaojintian/Best_README_template/network/members
 
+[stars-shield]: https://img.shields.io/github/stars/shaojintian/Best_README_template.svg?style=flat-square
+
+[stars-url]: https://github.com/shaojintian/Best_README_template/stargazers
+
+[issues-shield]: https://img.shields.io/github/issues/shaojintian/Best_README_template.svg?style=flat-square
+
+[issues-url]: https://img.shields.io/github/issues/shaojintian/Best_README_template.svg
+
+[license-shield]: https://img.shields.io/github/license/shaojintian/Best_README_template.svg?style=flat-square
+
+[license-url]: https://github.com/shaojintian/Best_README_template/blob/master/LICENSE.txt
