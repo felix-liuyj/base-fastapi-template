@@ -48,13 +48,15 @@
 2. pipenv
 3. Docker
 4. Jenkins
+5. Kafka
+6. Redis
 
 ###### **Install Steps**
 
 1. Clone the repo
 
 ```sh
-git clone git clone git@github.com:taotaro/binary-owl-python-backend.git
+git clone git clone git@github.com:felix-liuyj/base-fastapi-template.git
 pip install pipenv
 cd .
 pipenv install
