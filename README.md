@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/felix-liuyj/base-fastapi-template">
-    <img src="https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png" alt="Logo" width="500" height="90">
+    <img src="https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png" alt="Logo" width="250" height="90">
   </a>
 
 <h3 align="center">Base FastAPI Template</h3>
