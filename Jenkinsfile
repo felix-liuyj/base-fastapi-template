@@ -2,14 +2,15 @@ import groovy.json.JsonSlurper
 import hudson.FilePath
 import java.text.SimpleDateFormat
 
-//WORK_NODE=master
-//NODE_ENV=development
-//PROJECT_NAME=project_name
-//PROJECT_FULL_NAME=Project Name
-//EXPOSE_PORT=8000
-//SLACK_CHANNEL=#channel
-//EMAIL_RECEIVER=dev@example.com;cc:dev-cc@example.com
-//LOGO_URL=https://api.slack.com/img/blocks/bkb_template_images/approvalsNewDevice.png
+// WORK_NODE=master
+// NODE_ENV=development
+// PROJECT_NAME=project_name
+// PROJECT_FULL_NAME=Project Name
+// EXPOSE_PORT=8000
+// SLACK_CHANNEL=#channel
+// REMINDING_USERS=<@U05H9MAFMBM>
+// EMAIL_RECEIVER=dev@example.com;cc:dev-cc@example.com
+// LOGO_URL=https://api.slack.com/img/blocks/bkb_template_images/approvalsNewDevice.png
 
 pipeline {
     agent {
@@ -23,7 +24,7 @@ pipeline {
     stages {
         stage("Check Runtime Image") {
             steps {
-                buildName "Binary Owl Backend ${NODE_ENV.capitalize()} Auto Deploy NO.${BUILD_NUMBER}"
+                buildName "$PROJECT_FULL_NAME ${NODE_ENV.capitalize()} Auto Deploy NO.${BUILD_NUMBER}"
                 buildDescription "Build On Node: ${NODE_NAME} By ${BUILD_USER}"
 
                 script {
@@ -89,11 +90,15 @@ pipeline {
     }
     post {
         always {
-            slackSend channel: "$SLACK_CHANNEL", blocks: genSlackNotificationBlocks(currentBuild)
-            emailext subject: "[Auto Deploy] - $PROJECT_FULL_NAME ${NODE_ENV.capitalize()} Build Result",
-                body: '''${SCRIPT, template="managed:Groovy Email Build Result Template"}''',
-                to: '${DEFAULT_RECIPIENTS}; $EMAIL_RECEIVER',
-                mimeType: "text/html"
+            script {
+                if (SLACK_CHANNEL != "") {
+                    slackSend channel: "$SLACK_CHANNEL", blocks: genSlackNotificationBlocks(currentBuild)
+                }
+                emailext subject: "[Auto Deploy] - $PROJECT_FULL_NAME ${NODE_ENV.capitalize()} Build Result",
+                    body: '''${SCRIPT, template="managed:Groovy Email Build Result Template"}''',
+                    to: '${DEFAULT_RECIPIENTS}; $EMAIL_RECEIVER',
+                    mimeType: "text/html"
+            }
         }
     }
 }
@@ -143,7 +148,7 @@ def genSlackNotificationBlocks(build) {
         "type": "section",
         "text": [
             "type": "mrkdwn",
-            "text": "${resultIconMap[build.result]} *<${BUILD_URL}|Binary Owl Backend ${NODE_ENV.capitalize()}>*\t<@U05H9MAFMBM> <@U036EQRRFU7> <@U01G2KHDKKK>"
+            "text": "${resultIconMap[build.result]} *<${BUILD_URL}|Binary Owl Backend ${NODE_ENV.capitalize()}>*\t$REMINDING_USERS"
         ]
     ], [
         "type": "section",
