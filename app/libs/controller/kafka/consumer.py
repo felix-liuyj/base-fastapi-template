@@ -4,11 +4,11 @@ from aiokafka.util import create_task
 from app.config import get_settings
 
 __all__ = (
-    'BinaryOwlConsumer',
+    'BaseConsumer',
 )
 
 
-class BinaryOwlConsumer(AIOKafkaConsumer):
+class BaseConsumer(AIOKafkaConsumer):
     def __init__(self):
         super().__init__(
             *get_settings().KAFKA_CLUSTER_TOPICS.split(','),

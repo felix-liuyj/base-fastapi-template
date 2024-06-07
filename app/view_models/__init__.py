@@ -5,7 +5,7 @@ import string
 import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from smtplib import SMTPException, SMTP_SSL
+from smtplib import SMTP_SSL, SMTPException
 from typing import Annotated
 
 import jwt
@@ -16,12 +16,13 @@ from app.config import get_settings, Settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
 from app.libs.controller.cache_controller import RedisCacheController
 from app.libs.custom import cus_print, render_template
-from app.models.user import UserModel
+from app.models.user import UserModel, UserTitleEnum
 
 __all__ = (
     'ViewModelException',
     'ViewModelRequestException',
     'BaseViewModel',
+    'BaseCertificateOssViewModel',
 )
 
 
@@ -37,17 +38,17 @@ class ViewModelRequestException(ViewModelException):
 
 class BaseViewModel:
 
-    def __init__(self, request: Request = None, need_auth: bool = True):
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
         self.request: Request = request
         self.token = ''
         self.user_info = {}
         self.user_instance: UserModel = None
         self.need_auth = need_auth
+        self.access_title = access_title
         self.category = get_settings().APP_NO
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
         self.message = get_response_message(ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY)
         self.data = ''
-        self.sender = get_settings().MAIL_USERNAME
 
     def __enter__(self):
         try:
@@ -81,8 +82,10 @@ class BaseViewModel:
         if self.need_auth:
             self.token = self.request.headers.get('Authorization', '')
             await self.check_token()
-            if not self.user_info:
+            if not self.user_instance:
                 self.not_found('invalid token')
+            if self.access_title and self.user_instance.title not in self.access_title:
+                self.forbidden('operation not allowed')
 
     @abc.abstractmethod
     async def before(self):
@@ -139,10 +142,8 @@ class BaseViewModel:
 
     async def get_user_instance(self, email) -> UserModel:
         if user := await UserModel.find_one(UserModel.email == email):
-            pass
-        else:
-            self.not_found('email not registered')
-        return user
+            return user
+        self.not_found('email not registered')
 
     def operating_successfully(self, data: str | dict | list):
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
@@ -229,22 +230,25 @@ class BaseViewModel:
         except Exception as ex:
             self.system_error(f'system error for sending email: {str(ex)}, please contact the system administrator')
 
-    async def send_email_with_verification_code(self, token: str, email: str):
-        email_body = render_template('email/verification-code-template.html', {
-            'email': email, 'code': token
+    async def send_email_with_verification_code(
+            self, v_code: str, email: str, subject: str = '', expire: int = 0, email_body: str = ''
+    ):
+        email_body = email_body or render_template('email/verification-code-template.html', {
+            'email': email, 'code': v_code
         })
-        if self.send_email(self.sender, email, email_body, 'Verification Code For Binary Owl'):
-            async with RedisCacheController() as redis_cache:
-                await redis_cache.set(f'{email}-verification-code', token, 60 * 10)
-            self.operating_successfully('email sent successfully')
-        else:
-            self.operating_failed('email sending failed')
-
-    async def check_verification_code(self, email: str, token: str) -> bool:
         async with RedisCacheController() as redis_cache:
-            if await redis_cache.check_email_v_code(email, token):
+            await redis_cache.set(f'{email}-verification-code', v_code, expire or (60 * 10))
+            if self.send_email(get_settings().MAIL_USERNAME, email, email_body, subject or 'Verification Code'):
+                self.operating_successfully('email sent successfully')
+            else:
                 await redis_cache.clear(key=f'{email}-verification-code')
-                return True
+                self.operating_failed('email sending failed')
+
+    async def check_verification_code(self, email: str, v_code: str) -> bool:
+        async with RedisCacheController() as redis_cache:
+            if await redis_cache.check_email_v_code(email, v_code):
+                await redis_cache.clear(key=f'{email}-verification-code')
+                self.operating_successfully(email)
             self.illegal_parameters('invalid verification code')
 
     @staticmethod
@@ -253,3 +257,14 @@ class BaseViewModel:
 
     def __getitem__(self, item):
         return getattr(self, item)
+
+
+class BaseCertificateOssViewModel(BaseViewModel):
+
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
+        super().__init__(request, need_auth, access_title)
+        self.root = 'root'
+
+    @abc.abstractmethod
+    async def before(self):
+        pass

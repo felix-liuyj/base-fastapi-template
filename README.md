@@ -113,6 +113,7 @@ uvicorn main:app --host localhost --port 8080
 - [python-dateutil = "*"](https://pypi.org/project/python-dateutil)
 - [python-jenkins = "*"](https://pypi.org/project/python-jenkins)
 - [email-validator = "*"](https://pypi.org/project/email-validator)
+- [oss2 = "*"](https://pypi.org/project/oss2)
 
 <!-- links -->
 

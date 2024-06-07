@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     JENKINS_PASSWORD: str = None
     JENKINS_TOKEN: str = None
 
+    ALI_OSS_ACCESS_KEY: str
+    ALI_OSS_ACCESS_SECRET: str
+    ALI_OSS_REGION: str
+    ALI_OSS_BUCKET_NAME: str
+
     class Config:
         env_file = '.env'
 

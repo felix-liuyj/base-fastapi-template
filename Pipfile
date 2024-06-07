@@ -25,6 +25,7 @@ python-dotenv = "*"
 python-dateutil = "*"
 python-jenkins = "*"
 email-validator = "*"
+oss2 = "*"
 
 [dev-packages]
 

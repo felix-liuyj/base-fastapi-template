@@ -1,8 +1,7 @@
 from enum import Enum
 from functools import lru_cache
-from typing import List
 
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
 __all__ = (
     'ApiResponse',
@@ -10,14 +9,6 @@ __all__ = (
     'ResponseMessageMap',
     'get_response_message',
 )
-
-
-@dataclass
-class ApiResponse:
-    category: str
-    code: str
-    message: str
-    data: List[dict] | dict
 
 
 class ResponseStatusCodeEnum(Enum):
@@ -48,6 +39,17 @@ class ResponseMessageMap:
     SYSTEM_ERROR = "System Error"
 
 
+class ApiResponse(BaseModel):
+    category: str
+    code: ResponseStatusCodeEnum
+    message: str
+    data: dict | list | str
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        return cls(**d)
+
+
 @lru_cache()
 def get_response_message(status_code: ResponseStatusCodeEnum | str):
     rm_map = ResponseMessageMap()
@@ -55,7 +57,3 @@ def get_response_message(status_code: ResponseStatusCodeEnum | str):
         return getattr(rm_map, status_code.name, 'Undefined status code')
     status_code_enum = ResponseStatusCodeEnum(status_code)
     return getattr(rm_map, status_code_enum.name, status_code)
-
-
-if __name__ == '__main__':
-    print(get_response_message(ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY))

@@ -1,3 +1,4 @@
+import os
 import pathlib
 from contextlib import asynccontextmanager
 
@@ -12,7 +13,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
-from app.libs.controller.kafka import BinaryOwlConsumer
+from app.libs.controller.kafka import BaseConsumer
 from app.libs.custom import cus_print
 from app.models import BaseDBModel
 
@@ -23,11 +24,10 @@ __all__ = (
 
 def create_app():
     app = FastAPI(lifespan=lifespan)
-    app.mount(
-        "/statics",
-        StaticFiles(directory=f'{pathlib.Path(__file__).resolve().parent}/statics'),
-        name="statics",
-    )
+    statis_path = f'{pathlib.Path(__file__).resolve().parent}/statics'
+    if not os.path.exists(statis_path):
+        os.mkdir(statis_path)
+    app.mount("/statics", StaticFiles(directory=statis_path), name="statics")
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     mongo_client = await initialize_mongodb_client()
     await init_db(mongo_client)
     if get_settings().KAFKA_CLUSTER_BROKERS:
-        async with BinaryOwlConsumer():
+        async with BaseConsumer():
             print("Startup complete")
             yield
     else:
@@ -104,7 +104,10 @@ async def init_db(mongo_client: AsyncIOMotorClient):
 
 
 def load_models_class(module):
-    return [
-        getattr(module, model) for model in module.__all__ if
-        model.endswith('Model') and not model.endswith('ViewModel')
-    ]
+    class_list = []
+    for model in module.__all__:
+        module_class = getattr(module, model)
+        if module_class and issubclass(module_class, BaseDBModel):
+            class_list.append(module_class)
+
+    return class_list
