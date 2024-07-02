@@ -14,7 +14,7 @@ from jwt import ExpiredSignatureError, DecodeError
 
 from app.config import get_settings, Settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
-from app.libs.controller.cache_controller import RedisCacheController
+from app.libs.cache_controller import RedisCacheController
 from app.libs.custom import cus_print, render_template
 from app.models.user import UserModel, UserTitleEnum
 

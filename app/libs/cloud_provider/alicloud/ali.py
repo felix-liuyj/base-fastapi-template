@@ -10,7 +10,7 @@ from alibabacloud_tea_openapi.models import TeaModel, Config
 from alibabacloud_tea_util.models import RuntimeOptions
 from aliyunsdkcore.acs_exception.exceptions import ClientException
 
-from app.libs.controller.cloud_provider import BaseCloudProviderController
+from app.libs.cloud_provider import BaseCloudProviderController
 
 __all__ = (
     'AliCloudBillController',

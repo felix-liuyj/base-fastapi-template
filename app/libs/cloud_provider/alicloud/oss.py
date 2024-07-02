@@ -1,17 +1,32 @@
 import abc
 import base64
+from enum import Enum
 
 from oss2 import Bucket, Auth, CaseInsensitiveDict
 from oss2 import models as oss_models
 from starlette.concurrency import run_in_threadpool
 
-from app.libs.controller.cloud_provider import BaseCloudProviderController
+from app.libs.cloud_provider import BaseCloudProviderController
 from app.models.user import SupportCertificateMIMEType
 
 # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
 __all__ = (
     'AliCloudOssBucketController',
 )
+
+
+class BaseSupportMIMEType(Enum):
+    IMAGE_PNG = 'image/png'
+    IMAGE_JPG = 'image/jpeg'
+    IMAGE_JPEG = 'image/jpeg'
+    APPLICATION_PDF = 'application/pdf'
+    IMAGE_SVG = 'image/svg+xml'
+
+    @classmethod
+    def check_value_exists(cls, value: str) -> bool:
+        for member in cls:
+            if member.value == value:
+                return cls(value)
 
 
 class BaseAliCloudProviderController(BaseCloudProviderController):

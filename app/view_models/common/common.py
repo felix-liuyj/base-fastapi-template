@@ -5,7 +5,7 @@ from requests import ReadTimeout
 
 from app.config import get_settings
 from app.forms.common import *
-from app.libs.controller.cloud_provider import AliCloudOssBucketController
+from app.libs.cloud_provider import AliCloudOssBucketController
 from app.libs.custom import render_template
 from app.models.user import UserModel, SupportCertificateMIMEType, CertificationType, CertificationItemType
 from app.view_models import BaseViewModel, BaseCertificateOssViewModel

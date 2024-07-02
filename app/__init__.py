@@ -13,7 +13,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
-from app.libs.controller.kafka import BaseConsumer
+from app.libs.kafka import BaseConsumer
 from app.libs.custom import cus_print
 from app.models import BaseDBModel
 

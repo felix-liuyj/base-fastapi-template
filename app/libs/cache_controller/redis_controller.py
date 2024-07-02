@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi_cache.backends.redis import RedisBackend
 
-from app.libs.controller.cache_controller import BaseCacheController
+from app.libs.cache_controller import BaseCacheController
 
 __all__ = (
     'RedisCacheController',
