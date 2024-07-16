@@ -31,15 +31,17 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
+        allow_origins=['*'],
+        allow_methods=['*'],
+        allow_headers=['*'],
+        expose_headers=['*']
     )
     return app
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print('Load Core Application...')
     await init_cache()
     await register_routers(app)
     mongo_client = await initialize_mongodb_client()
