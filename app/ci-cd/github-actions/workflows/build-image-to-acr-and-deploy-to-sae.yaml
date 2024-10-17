@@ -1,0 +1,93 @@
+name: "Build Docker Image To ACR And Deploy To SAE"
+
+# 指定触发分支，push：代码提交时触发，pull_request：pr 提交时触发
+on:
+  push:
+    branches:
+      - staging
+      - development
+      - preview
+      - main
+
+jobs:
+  build:
+    # 运行机器，如果不是自定义的机器，会随机使用一台 Github 自有的机器运行
+    runs-on: ubuntu-latest
+    # 根据触发分支选择各自的环境变量
+    # base_ref：pr 特有，表示目标分支
+    # ref_name：push 时有效，标识提交分支
+    environment: ${{ github.base_ref || 'development' }}-env
+    # 环境变量，有效范围取决于所在层级，在 root 层级为全局变量
+    env:
+      TZ: Asia/Shanghai
+      # 本次编译的镜像 tag
+      IMAGE_TAG: ${{ github.sha }}
+      IMAGE_URL: ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_REPOSITORY }}
+    steps:
+      # 记录开始时间
+      - name: Record start time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Set timezone to Asia/Shanghai
+        run: sudo timedatectl set-timezone Asia/Shanghai && date
+
+      # 拉取最新代码
+      - uses: actions/checkout@v4
+
+      # 登录 ACR
+      - name: Login to ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: https://${{ secrets.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+          region-id: ${{ secrets.ALICLOUD_REGION_ID }}
+
+      # 编译并提交镜像到ACR, 若指定了 sae-config-map-id 参数则会从 SAE 配置项中加载配置到系统环境变量参与 Docker Image 编译，此时需要配置 AK-ID， AK-SECRET 和 Region ID
+      - name: Build and Push Docker Image To ACR
+        uses: taotaro/actions-toolkit@build-image-to-acr
+        with:
+          # 仅在需要编译镜像时加载配置使用 (React App)，sae-config-map-id 未配置会跳过配置加载流程
+          # access-key-id: ${{ secrets.ALICLOUD_ACCESS_KEY_ID }}
+          # access-key-secret: ${{ secrets.ALICLOUD_ACCESS_KEY_SECRET }}
+          # region-id: ${{ secrets.ALICLOUD_REGION_ID }}
+          # sae-config-map-id: ${{ secrets.SAE_CONFIG_MAP_ID }}
+          final_image_url: ${{ env.IMAGE_URL }}:${{ env.IMAGE_TAG }}
+
+      # 使用编译的镜像触发 SAE 部署
+      - name: Deploy to SAE
+        uses: taotaro/actions-toolkit@deploy-to-sae
+        with:
+          access-key-id: ${{ secrets.ALICLOUD_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.ALICLOUD_ACCESS_KEY_SECRET }}
+          region-id: ${{ secrets.ALICLOUD_REGION_ID }}
+          sae-app-id: ${{ secrets.SAE_APP_ID }}
+          acr-instance-id: ${{ secrets.ACR_INSTANCE_ID }}
+          acr-image-url: ${{ env.IMAGE_URL }}:${{ env.IMAGE_TAG }}
+
+      # 登出 ACR
+      - name: Log out from ACR
+        run: docker logout $ACR_REGISTRY
+
+      # 记录结束时间
+      - name: Record end time
+        if: ${{ always() }}
+        run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      # 发送运行结果到 Lark
+      - name: Send Notification To Lark
+        if: ${{ always() }}
+        uses: taotaro/actions-toolkit@send-action-notification-to-lark
+        with:
+          webhook: ${{ secrets.LARK_BOT_WEBHOOK }}
+          icon: ${{ vars.LARK_NOTIFICATION_ICON }}
+          title: 'Github Actions Automatic Deployment Job Build Result'
+          trigger: ${{ github.actor }}
+          project-name: ${{ vars.PROJECT_DISPLAY_NAME || 'Action Build Error' }}
+          start-time: ${{ env.START_TIME }}
+          end-time: ${{ env.END_TIME }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+          environment: ${{ vars.ENVIRONMENT }}
+          status: ${{ job.status }}
+          alert-members: ${{ vars.LARK_NOTIFICATION_ALERT_MEMBERS }}

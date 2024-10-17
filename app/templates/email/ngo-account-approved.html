@@ -1,0 +1,16 @@
+{% extends "base-template.html" %}
+
+{% block content %}
+    <h3 style="font-family: Helvetica, sans-serif; margin: 0 0 16px;">
+        Hello! <strong>{{ data.email }}</strong>!
+    </h3>
+    <p class="text-line">
+        Your Affiliation {{ data.affiliation }} has approved your organization: {{ data.org_name }} register request.
+    </p>
+    <p class="text-line">
+        Your can use our services now!
+    </p>
+    <p class="text-line">
+        We are glad you are here!
+    </p>
+{% endblock %}

@@ -13,6 +13,7 @@ from email.mime.text import MIMEText
 from smtplib import SMTP_SSL, SMTPException
 from socket import socket, AF_INET, SOCK_DGRAM
 
+from cryptography.fernet import Fernet
 from jinja2 import Environment, FileSystemLoader
 from rich.console import Console
 
@@ -26,7 +27,6 @@ __all__ = (
     'update_data',
     'update_dict_in_data',
     'get_xlsx_line',
-    'get_auth_config',
     'get_local_ip',
     'cur_date',
     'parse_to_utc8',
@@ -137,26 +137,6 @@ def cus_print(print_str: str, mode: str = 'l', end: str = '\n'):
     console.print(f'[bold {cs_p_c_t.get(mode)}]{print_str}', end=end)
 
 
-def get_auth_config(path, *args):
-    """
-    从配置文件获取账户配置信息\n
-    :param path: 配置文件所在目录
-    :param args: 配置名
-    :return: 若 args 长度为 1，返回单个配置字典，否则返回所有配置组成的元组
-    """
-
-    def b64_decrypt(pwd: str):
-        import base64
-        a = [c for c in pwd]
-        a[::2] = [chr(ord(c) - 1) for c in a[::2]]
-        a[1::2] = [chr(ord(c) // 2) for c in a[1::2]]
-        return base64.b64decode(''.join(a)).decode('utf-8')
-
-    with open(path, 'r', encoding='utf-8') as ac_f:
-        configs = json.loads(b64_decrypt(ac_f.read()))
-    return configs.get(args[0]) if len(args) == 1 else (configs.get(arg) for arg in args)
-
-
 def get_local_ip():
     """
     建立与本地的 UDP 连接获取本地 IP\n
@@ -246,18 +226,14 @@ def multi_task(process_method, container, data_list: list, *args, select_mode=Fa
     ) for ind, data in enumerate(data_list)], return_when=ALL_COMPLETED)
 
 
-def encrypt(ori_bytes: str):
-    a = [c for c in ori_bytes]
-    a[::2] = [chr(ord(c) + 1) for c in a[::2]]
-    a[1::2] = [chr(ord(c) * 2) for c in a[1::2]]
-    return ''.join(a)
+def encrypt(origin: str, key: str):
+    cipher_suite = Fernet(key)
+    return cipher_suite.encrypt(origin.encode('utf-8')).decode('utf-8')
 
 
-def decrypt(encrypted_bytes: str):
-    a = [c for c in encrypted_bytes]
-    a[::2] = [chr(ord(c) - 1) for c in a[::2]]
-    a[1::2] = [chr(ord(c) // 2) for c in a[1::2]]
-    return ''.join(a)
+def decrypt(encrypted_str: str, key: str) -> str:
+    cipher_suite = Fernet(key)
+    return cipher_suite.decrypt(encrypted_str.encode('utf-8')).decode('utf-8')
 
 
 def traverse_list_ordinal_possibility(container: list, source: list, tier: int, start: int = 0, item: list = None):
@@ -304,7 +280,7 @@ def deserialize(obj_str: str) -> dict:
     return json.loads(obj_str)
 
 
-def render_template(template_name: str, render_data: dict) -> str:
+def render_template(template_name: str, **render_data: dict) -> str:
     # Create an Environment object that specifies how the template will be loaded as a file system
     env = Environment(loader=FileSystemLoader(f'{pathlib.Path(__file__).resolve().parent.parent}/templates'))
     # Load a template file, the contents of which is an HTML page with some placeholders

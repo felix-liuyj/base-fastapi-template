@@ -1,40 +1,37 @@
 import abc
+import base64
+
+from oss2 import Bucket, Auth, CaseInsensitiveDict, models as oss_models
+from oss2.exceptions import NoSuchKey
+from starlette.concurrency import run_in_threadpool
+
+from app.config import get_settings
+from app.libs.cloud_provider import BaseCloudProviderController
+from app.models import SupportImageMIMEType, SupportDataMIMEType
+import abc
 import math
 from typing import List
 
+from Tea.exceptions import TeaException
 from alibabacloud_agency20221216 import models as agency_models
 from alibabacloud_agency20221216.client import Client as AgencyClient
+from alibabacloud_agency20221216.models import GetAccountInfoResponseBodyAccountInfoListAccountInfo
 from alibabacloud_bssopenapi20171214 import models as bss_models
+# from alibabacloud_ram20150501 import models as ram_models
+# from alibabacloud_sts20150401 import models as sts_models
 from alibabacloud_bssopenapi20171214.client import Client as BssOpenApiClient
+from alibabacloud_ram20150501 import models as ram_models
+from alibabacloud_ram20150501.client import Client as RamClient
+from alibabacloud_sts20150401.client import Client as StsClient
 from alibabacloud_tea_openapi.models import TeaModel, Config
 from alibabacloud_tea_util.models import RuntimeOptions
 from aliyunsdkcore.acs_exception.exceptions import ClientException
 
-from app.libs.cloud_provider import BaseCloudProviderController
 
+# 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
 __all__ = (
-    'AliCloudBillController',
-    'AliCloudResponseBody',
-    'AliCloudCreditController',
+    'AliCloudOssBucketController',
 )
-
-
-class AliCloudResponseBody(TeaModel):
-    def __init__(
-            self,
-            code: str = None,
-            message: str = None,
-            request_id: str = None,
-            success: bool = None,
-    ):
-        super().__init__()
-        self.code = code
-        self.message = message
-        self.request_id = request_id
-        self.success = success
-
-    def validate(self):
-        pass
 
 
 class BaseAliCloudProviderController(BaseCloudProviderController):
@@ -62,13 +59,18 @@ class AliCloudBillController(BaseAliCloudProviderController, BssOpenApiClient):
 
     def __init__(self, access_key: str, access_secret: str, region_id: str, result: list | dict = None):
         BaseAliCloudProviderController.__init__(self, access_key, access_secret, region_id, result)
+        # if region_id == 'ap-southeast-1':
+        #     self.endpoint = 'business.ap-southeast-1.aliyuncs.com'
+        # else:
+        #     self.endpoint = 'business.aliyuncs.com'
 
     async def login(self):
         config = Config(
             access_key_id=self._access_key,
             access_key_secret=self._access_secret,
             # Endpoint 请参考 https://api.aliyun.com/product/Agency
-            endpoint='business.ap-southeast-1.aliyuncs.com'
+            endpoint='business.ap-southeast-1.aliyuncs.com',
+            # region_id=self._region_id
         )
         BssOpenApiClient.__init__(self, config)
 
@@ -86,7 +88,8 @@ class AliCloudBillController(BaseAliCloudProviderController, BssOpenApiClient):
     async def get_client_list(self) -> list[str, ...]:
         response: bss_models.GetCustomerListResponse = await self.get_customer_list_with_options_async(self.options)
         body = response.body
-        if not body.success:
+        print(f'client response {response.to_map()}')
+        if not body.success or not body.data:
             return []
         return body.data.uid_list
 
@@ -101,13 +104,27 @@ class AliCloudBillController(BaseAliCloudProviderController, BssOpenApiClient):
         return {**body.data.to_map(), 'clientId': int(client_id)}
 
     async def get_account_balance(self) -> bss_models.QueryAccountBalanceResponseBodyData:
-        response = await self.query_account_balance_with_options_async(
-            self.options
-        )
-        body = response.body
-        if not body.success:
-            return {}
-        return body.data
+        try:
+            response = await self.query_account_balance_with_options_async(
+                self.options
+            )
+            body = response.body
+            if not body.success:
+                return {}
+            return body.data
+        except TeaException as e:
+            print('client exception: ', e)
+            return e.code
+            # return 'error'
+        # response = await self.query_account_balance_with_options_async(
+        #     self.options
+        # )
+        # print('response: ', response)
+        # body = response.body
+        # print('account balance: ', body)
+        # if not body.success:
+        #     return {}
+        # return body.data
 
     async def get_reseller_discount(self):
         request = bss_models.QuerySavingsPlansDiscountRequest(
@@ -265,6 +282,7 @@ class AliCloudCreditController(BaseAliCloudProviderController, AgencyClient):
             access_key_id=self._access_key,
             access_key_secret=self._access_secret,
             # Endpoint 请参考 https://api.aliyun.com/product/Agency
+            # region_id=self._region_id
             endpoint='agency.ap-southeast-1.aliyuncs.com'
         )
         AgencyClient.__init__(self, config)
@@ -293,9 +311,159 @@ class AliCloudCreditController(BaseAliCloudProviderController, AgencyClient):
         account_info = body.account_info_list.account_info
         return {**account_info[0].to_map(), 'clientId': int(client_id)} if account_info else {}
 
+    async def get_client_info_list(
+            self, client_id: str | int = '', user_type: str = '', page_no: int = 1, page_size: int = 20
+    ) -> list[GetAccountInfoResponseBodyAccountInfoListAccountInfo]:
+        query_condition = {'current_page': page_no, 'page_size': page_size}
+        if client_id:
+            query_condition.update(uid=int(client_id))
+        else:
+            query_condition.update(user_type=user_type or '1')
+        request = agency_models.GetAccountInfoRequest(**query_condition)
+        response: agency_models.GetAccountInfoResponse = await self.get_account_info_with_options_async(
+            request, self.options
+        )
+        body: agency_models.GetAccountInfoResponseBody = response.body
+        if not body.success:
+            return []
+        [print(
+            f'UID: {client_info.uid}, NickName: {client_info.account_nickname}, Email: {client_info.email}, Remark: {client_info.remark}'
+        ) for client_info in body.account_info_list.account_info]
+        if body.page_info.page * body.page_info.page_size < body.page_info.total:
+            return [*body.account_info_list.account_info, *(
+                await self.get_client_info_list(client_id, user_type, page_no + 1, page_size)
+            )]
+        else:
+            return body.account_info_list.account_info
+
     async def get_client_credit_info(self, client_id: str) -> agency_models.GetCreditInfoResponseBodyData:
         request = agency_models.GetCreditInfoRequest(client_id)
         response: agency_models.GetCreditInfoResponse = await self.get_credit_info_with_options_async(
             request, self.options
         )
         return response.body.data
+
+
+class AliCloudRAMController(BaseAliCloudProviderController, RamClient):
+
+    def __init__(self, access_key: str, access_secret: str, region_id: str, result: list | dict = None):
+        BaseAliCloudProviderController.__init__(self, access_key, access_secret, region_id, result or [])
+
+    async def login(self):
+        config = Config(
+            access_key_id=self._access_key,
+            access_key_secret=self._access_secret,
+            # Endpoint 请参考 https://api.aliyun.com/product/Agency
+            region_id=self._region_id
+        )
+        RamClient.__init__(self, config)
+
+    async def get_policy_list(self):
+        request = ram_models.ListPoliciesRequest()
+        response = await self.list_policies_with_options_async(request, self.options)
+        print((response.to_map()))
+        return response.body
+
+    async def validate_account_id(self, account_id: str):
+        try:
+            request = ram_models.GetUserRequest()
+            response = await self.get_user_with_options_async(request, self.options)
+            print(response.body)
+        except TeaException as e:
+            print(e)
+
+
+class AliCloudSTSController(BaseAliCloudProviderController, StsClient):
+
+    def __init__(self, access_key: str, access_secret: str, region_id: str, result: list | dict = None):
+        BaseAliCloudProviderController.__init__(self, access_key, access_secret, region_id, result or [])
+
+    async def login(self):
+        config = Config(
+            access_key_id=self._access_key,
+            access_key_secret=self._access_secret,
+            # Endpoint 请参考 https://api.aliyun.com/product/Agency
+            region_id=self._region_id
+        )
+        StsClient.__init__(self, config)
+
+    async def validate_account_id(self, account_id: str):
+        try:
+            response = await self.get_caller_identity_async()
+            # response = await self.get_caller_identity_with_options_async( self.options)
+            if response.body.account_id == account_id:
+                return response.body
+            return -1
+        except TeaException as e:
+            print(e)
+            return -1
+
+
+class AliCloudOssBucketController(BaseAliCloudProviderController, Bucket):
+
+    def __init__(self, result: list | dict = None):
+        BaseAliCloudProviderController.__init__(
+            self, access_key=get_settings().ALI_OSS_ACCESS_KEY, access_secret=get_settings().ALI_OSS_ACCESS_SECRET,
+            region_id=get_settings().ALI_OSS_REGION, result=result
+        )
+        self.bucket_name = get_settings().ALI_OSS_BUCKET_NAME
+
+    @property
+    def access_url_prefix(self) -> str:
+        return f'https://{self.bucket_name}.oss-{self._region_id}.aliyuncs.com/'
+
+    async def login(self):
+        auth = Auth(
+            access_key_id=self._access_key,
+            access_key_secret=self._access_secret,
+        )
+        Bucket.__init__(
+            self, auth=auth, bucket_name=self.bucket_name,
+            endpoint=f'oss-{self._region_id}.aliyuncs.com', region=self._region_id
+        )
+
+    async def get_bucket_info_async(self) -> oss_models.GetBucketInfoResult:
+        result: oss_models.GetBucketInfoResult = await run_in_threadpool(self.get_bucket_info)
+        return result if result.status == 200 else None
+
+    async def put_object_with_public_read_async(self, file_path: str, body: bytes) -> oss_models.PutObjectResult:
+        return await self.put_object_async(file_path, body, headers={'x-oss-object-acl': 'public-read'})
+
+    async def put_object_async(self, file_path: str, body: bytes, headers: dict = None) -> oss_models.PutObjectResult:
+        request_headers = CaseInsensitiveDict()
+        request_headers.setdefault('Content-Disposition', 'inline')
+        if headers:
+            request_headers.update(headers)
+        result = await run_in_threadpool(self.put_object, key=file_path, data=body, headers=request_headers)
+        return result if result.status == 200 else None
+
+    async def get_object_async(self, file_path: str, headers: dict = None) -> oss_models.GetObjectResult:
+        request_headers = CaseInsensitiveDict()
+        request_headers.setdefault('response-content-disposition', 'inline')
+        if headers:
+            request_headers |= headers
+        result = await run_in_threadpool(self.get_object, key=file_path, headers=request_headers)
+        return result if result.status == 200 else None
+
+    async def get_object_with_base64_async(
+            self, file_path: str, file_type: (SupportImageMIMEType | SupportDataMIMEType)
+    ) -> str:
+        try:
+            if not file_path:
+                return f'data:{file_type.value};base64,'
+            avatar_type = SupportImageMIMEType.check_value_exists(file_type.value)
+            if all([not avatar_type]):
+                return ''
+            result: oss_models.GetObjectResult = await run_in_threadpool(self.get_object, key=file_path)
+            file_object = result.stream.read()
+            # 将PDF字节内容编码为Base64字符串
+            pdf_base64 = base64.b64encode(file_object)
+            # 将字节对象转换为字符串（如果需要）
+            pdf_base64_str = pdf_base64.decode('utf-8')
+            return f'data:{file_type.value};base64,{pdf_base64_str}'
+        except NoSuchKey:
+            return f'data:{file_type.value};base64,'
+
+    async def generate_object_access_url_async(self, file_path: str, expire: int = 60):
+        signed_url = await run_in_threadpool(self.sign_url, method='GET', key=file_path, expires=expire)
+        return signed_url

@@ -1,75 +1,61 @@
-from typing import Optional
+from fastapi import APIRouter, Request, Query, UploadFile, File, Form
 
-from fastapi import APIRouter, Request, Query, File, UploadFile
-
-from app.forms.common import *
-from app.view_models.common import *
+from app.forms.account import *
+from app.response import ResponseModel
+from app.response.account import AccountLoginResponseData
+from app.view_models.account.common import *
 
 router = APIRouter(
-    prefix='/common', tags=['Common API'], dependencies=[]
+    prefix='', tags=['Account API'], dependencies=[]
 )
 
 
-@router.post('/register')
-async def register_account(form_data: RegisterAccountForm):
-    async with RegisterViewModel(form_data) as response:
+@router.post(
+    '/register',
+    response_model=ResponseModel[str],
+    description='Register account for organization registration'
+)
+async def register_account(
+        email: str = Form(..., description='account email'),
+        name: str = Form(..., description='organization name'),
+        username: str = Form(..., description='user display name'),
+        password: str = Form(..., description='user password'),
+        v_code: str = Form(..., alias='vCode', alias_priority=1000, description='Email verification code'),
+        avatar: UploadFile = File(..., description='certificate file body'),
+):
+    async with RegisterViewModel(email, name, username, password, v_code, avatar) as response:
         return response
 
 
-@router.post('/login')
+@router.post(
+    '/login',
+    response_model=ResponseModel[AccountLoginResponseData | str],
+    description='Login account'
+)
 async def login_user(form_data: LoginForm):
     async with UserLoginViewModel(form_data) as response:
         return response
 
 
-@router.get('/logout')
+@router.post('/logout')
 async def logout_user(request: Request):
     async with UserLogoutViewModel(request) as response:
         return response
 
 
-@router.post('/file')
-async def upload_organization_certificate(
-        category: str = Query(
-            ..., embed=True,
-            description='certificate category, only support identification_document/event_creation_licence_document/business_registration_certificate'
-        ),
-        upload_file: UploadFile = File(..., description='certificate file body'),
-        request: Request = None
-):
-    async with UploadFileViewModel(category, upload_file, request) as response:
-        return response
-
-
-@router.get('/file')
-async def get_organization_certificate(
-        category: str = Query(
-            ..., embed=True, example='identification_document',
-            description='certificate category, only support identification_document/event_creation_licence_document/business_registration_certificate'
-        ),
-        download_file: Optional[bool] = Query(
-            default=False, embed=True,
-            description='download file or not, if it is true, the response will be a download url'
-        ),
-        request: Request = None
-):
-    async with GetFileViewModel(category, download_file, request) as response:
-        return response
-
-
-@router.get('/user-info')
-async def get_user_info_account(request: Request):
+@router.get('/user')
+async def get_user_info(request: Request):
     async with GetUserInfoViewModel(request) as response:
         return response
 
 
-@router.post('/send-v-code')
-async def send_verification_code(form_data: ValidateEmailForm):
-    async with SendVerificationCodeViewModel(form_data) as response:
+@router.get('/users')
+async def get_user_info_list(request: Request):
+    async with GetUserInfoListViewModel(request) as response:
         return response
 
 
-@router.post('/verify-email')
-async def verify_email(form_data: VerifyEmailForm):
-    async with VerifyEmailViewModel(form_data) as response:
+@router.get('/v-code')
+async def send_verification_code(email: str = Query(..., embed=True)):
+    async with SendVerificationCodeViewModel(email) as response:
         return response

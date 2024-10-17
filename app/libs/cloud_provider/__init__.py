@@ -26,4 +26,4 @@ class BaseCloudProviderController(BaseDataProcess):
         return str(uuid.uuid5(namespace, name))
 
 
-from .alicloud.oss import *
+from .ali import *

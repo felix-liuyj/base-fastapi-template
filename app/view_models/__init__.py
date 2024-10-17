@@ -1,29 +1,86 @@
 import abc
+import json
 import random
-import ssl
 import string
 import time
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP_SSL, SMTPException
-from typing import Annotated
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any
 
 import jwt
-from fastapi import Request, Depends
+from dateutil.relativedelta import relativedelta
+from faker.proxy import Faker
+from fastapi import Request, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
+from jenkins import TimeoutException
 from jwt import ExpiredSignatureError, DecodeError
+from pydantic import EmailStr, BaseModel
+from starlette import status
 
-from app.config import get_settings, Settings
+from app.config import get_settings
+from app.libs.cloud_provider import AliCloudOssBucketController
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
-from app.libs.cache_controller import RedisCacheController
 from app.libs.custom import cus_print, render_template
-from app.models.user import UserModel, UserTitleEnum
+from app.libs.integration_api_controller import IntegrationApiCommonController
+from app.libs.mlpg_api_controller import MLPGTransactionApiController, PaymentGatewayEnum
+from app.models.account import UserTitleEnum, ImageFileType
+from app.models.account.admin import AdminConfigurationModel
+from app.models.common import UserModel
+from app.models.account.organization import OrganizationConfigurationModel
+from app.response import ResponseModel
 
 __all__ = (
+    'get_current_user_config',
     'ViewModelException',
     'ViewModelRequestException',
     'BaseViewModel',
-    'BaseCertificateOssViewModel',
+    'BaseOssViewModel',
+    'BaseUserCertificateOssViewModel',
+    'BaseEventOssViewModel',
+    'BasePaymentProductOssViewModel',
+    'BaseAccountAvatarOssViewModel',
+    'BasePaymentViewModel',
 )
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class TokenData(BaseModel):
+    userId: str
+    email: EmailStr
+    title: str
+    exp: int
+
+
+def generate_un_auth_exception(msg: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail=msg, headers={"Authenticate": "Bearer"}
+    )
+
+
+def verify_token(token: str) -> TokenData:
+    try:
+        jwt_verify_result = jwt.decode(token, get_settings().COOKIE_KEY, algorithms=['HS256']) or {}
+        token_data = TokenData(**jwt_verify_result)
+        if not jwt_verify_result:
+            raise generate_un_auth_exception('please pass the token in the authorization header to proceed')
+        if not jwt_verify_result.get('userId'):
+            raise generate_un_auth_exception('invalid token')
+        return token_data
+    except ExpiredSignatureError:
+        raise generate_un_auth_exception('token expired. Please login again to continue')
+    except DecodeError:
+        raise generate_un_auth_exception('invalid token')
+
+
+# Dependency to extract token and load user config
+async def get_current_user_config(token: str = Depends(oauth2_scheme)) -> UserModel:
+    token_data = verify_token(token)
+    if not (user_instance := await UserModel.find_one(UserModel.email == token_data.email)):
+        raise generate_un_auth_exception('no user found')
+    if token_data.access_title and token_data.user_instance.title not in token_data.access_title:
+        raise generate_un_auth_exception('operation not allowed')
+    return user_instance
 
 
 class ViewModelException(Exception):
@@ -43,12 +100,14 @@ class BaseViewModel:
         self.token = ''
         self.user_info = {}
         self.user_instance: UserModel = None
+        self.user_configuration: AdminConfigurationModel | OrganizationConfigurationModel = None
         self.need_auth = need_auth
         self.access_title = access_title
+        self.faker = Faker()
         self.category = get_settings().APP_NO
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
         self.message = get_response_message(ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY)
-        self.data = ''
+        self.data = None
 
     def __enter__(self):
         try:
@@ -56,15 +115,28 @@ class BaseViewModel:
             self.before()
         except ViewModelRequestException:
             pass
-        return self
+        return ResponseModel(
+            category=self.category,
+            code=self.code,
+            message=self.message,
+            data=self.data
+        )
+        # return self
 
     async def __aenter__(self):
         try:
             await self.__extract_token()
             await self.before()
+        except TimeoutException as e:
+            self.request_timeout(str(e))
         except ViewModelRequestException:
             pass
-        return self
+        return ResponseModel(
+            category=self.category,
+            code=self.code,
+            message=self.message,
+            data=self.data
+        )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.after()
@@ -80,12 +152,25 @@ class BaseViewModel:
 
     async def __extract_token(self):
         if self.need_auth:
-            self.token = self.request.headers.get('Authorization', '')
+            if not (header := self.request.headers):
+                self.unauthorized('please pass the token in the authorization header to proceed')
+            self.token = header.get('Authorization', '')
             await self.check_token()
             if not self.user_instance:
                 self.not_found('invalid token')
             if self.access_title and self.user_instance.title not in self.access_title:
                 self.forbidden('operation not allowed')
+            match self.user_instance.title:
+                case UserTitleEnum.ADMIN:
+                    self.user_configuration = await AdminConfigurationModel.find_one(
+                        AdminConfigurationModel.affiliation == self.user_email
+                    )
+                case UserTitleEnum.ORGANIZATION:
+                    self.user_configuration = await OrganizationConfigurationModel.find_one(
+                        OrganizationConfigurationModel.affiliation == self.user_email
+                    )
+                case _:
+                    self.user_configuration = None
 
     @abc.abstractmethod
     async def before(self):
@@ -100,7 +185,7 @@ class BaseViewModel:
 
     @property
     def user_title(self):
-        return self.user_info.get('title', '')
+        return self.user_instance.title
 
     @staticmethod
     def generate_random_token(length: int = 10):
@@ -205,51 +290,10 @@ class BaseViewModel:
         self.data = msg
         raise ViewModelRequestException(message=msg)
 
-    def send_email(
-            self, sender: str, receiver: str, body: str, subject: str = 'subject',
-            settings: Annotated[Settings, Depends(get_settings)] = None
-    ) -> bool:
-        try:
-            message = MIMEMultipart("alternative")
-            message['From'] = sender
-            message['To'] = receiver
-            message['Subject'] = subject
-
-            part = MIMEText(body, "html")
-            message.attach(part)
-
-            context = ssl.create_default_context()
-            context.set_ciphers('DEFAULT')
-
-            with SMTP_SSL(settings.MAIL_HOST, settings.MAIL_PORT, context=context) as server:
-                server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
-                server.sendmail(settings.MAIL_USERNAME, receiver, message.as_string())
-            return True
-        except SMTPException:
-            return False
-        except Exception as ex:
-            self.system_error(f'system error for sending email: {str(ex)}, please contact the system administrator')
-
-    async def send_email_with_verification_code(
-            self, v_code: str, email: str, subject: str = '', expire: int = 0, email_body: str = ''
-    ):
-        email_body = email_body or render_template('email/verification-code-template.html', {
-            'email': email, 'code': v_code
-        })
-        async with RedisCacheController() as redis_cache:
-            await redis_cache.set(f'{email}-verification-code', v_code, expire or (60 * 10))
-            if self.send_email(get_settings().MAIL_USERNAME, email, email_body, subject or 'Verification Code'):
-                self.operating_successfully('email sent successfully')
-            else:
-                await redis_cache.clear(key=f'{email}-verification-code')
-                self.operating_failed('email sending failed')
-
-    async def check_verification_code(self, email: str, v_code: str) -> bool:
-        async with RedisCacheController() as redis_cache:
-            if await redis_cache.check_email_v_code(email, v_code):
-                await redis_cache.clear(key=f'{email}-verification-code')
-                self.operating_successfully(email)
-            self.illegal_parameters('invalid verification code')
+    @staticmethod
+    async def send_mail(email: str, subject: str, email_body: str) -> bool:
+        async with IntegrationApiCommonController() as isa_c:
+            return await isa_c.send_mail(email, subject, email_body)
 
     @staticmethod
     def keys():
@@ -258,13 +302,159 @@ class BaseViewModel:
     def __getitem__(self, item):
         return getattr(self, item)
 
+    @staticmethod
+    def get_last_times(
+            num: int, category: str = 'month', date: datetime = None, reverse: bool = False
+    ) -> list[str, ...]:
+        latest_cycle_list = []
+        current_date = date if date else datetime.now()
+        for i in range(num):
+            delta, date_f_string = {
+                'month': (relativedelta(months=i), '%Y-%m'),
+                'day': (relativedelta(days=i), '%Y-%m-%d')
+            }.get(category, (None, None))
+            billing_cycle = (current_date - delta).strftime(date_f_string)
+            latest_cycle_list.append(billing_cycle)
+        if reverse:
+            latest_cycle_list.reverse()
+        return latest_cycle_list
 
-class BaseCertificateOssViewModel(BaseViewModel):
+
+class BaseOssViewModel(BaseViewModel):
 
     def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
         super().__init__(request, need_auth, access_title)
-        self.root = 'root'
+        self.root = ''
 
     @abc.abstractmethod
     async def before(self):
         pass
+
+    @staticmethod
+    async def gen_access_url(file_path: str | list[str]) -> list[str] | str:
+        async with AliCloudOssBucketController() as ob_c:
+            return f'{ob_c.access_url_prefix}{file_path}' if isinstance(file_path, str) else [
+                f'{ob_c.access_url_prefix}{path}' for path in file_path
+            ]
+
+    @staticmethod
+    async def get_b64_object(file_path: str, file_type: Any) -> str:
+        async with AliCloudOssBucketController() as ob_c:
+            return await ob_c.get_object_with_base64_async(
+                file_path=file_path, file_type=file_type
+            )
+
+    @staticmethod
+    async def generate_object_access_url(file_path: str, expire: int = 60) -> str:
+        async with AliCloudOssBucketController() as ob_c:
+            return await ob_c.generate_object_access_url_async(
+                file_path=file_path, expire=expire
+            )
+
+
+class BaseUserCertificateOssViewModel(BaseOssViewModel):
+
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
+        super().__init__(request, need_auth, access_title)
+        self.root = 'org-certification'
+
+    @abc.abstractmethod
+    async def before(self):
+        pass
+
+    async def send_mail_to_affiliation(self, affiliation: EmailStr, name: str):
+        email_body = render_template(
+            'email/certificate-approval-required.html',
+            admin_email=affiliation, org_name=name, approve_url=f'{get_settings().FRONTEND_DOMAIN}/applications'
+        )
+        await self.send_mail(
+            affiliation, 'The New Organization Certificate Needs Your Approval', email_body
+        )
+
+
+class BaseEventOssViewModel(BaseOssViewModel):
+
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
+        super().__init__(request, need_auth, access_title)
+        self.root = 'org-events'
+
+    @abc.abstractmethod
+    async def before(self):
+        pass
+
+    @staticmethod
+    async def get_event_puck_render_pages(pages_render_path) -> dict:
+        async with AliCloudOssBucketController() as ob_c:
+            render_resource = await ob_c.get_object_async(pages_render_path)
+            resource_content: bytes = render_resource.read()
+            return json.loads(resource_content.decode('utf-8'))
+
+    @staticmethod
+    async def update_event_puck_render_pages(pages_render_path: str, page_render: dict):
+        async with AliCloudOssBucketController() as ob_c:
+            return await ob_c.put_object_async(pages_render_path, json.dumps(page_render).encode())
+
+
+class BasePaymentProductOssViewModel(BaseOssViewModel):
+
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
+        super().__init__(request, need_auth, access_title)
+        self.root = 'payment-product'
+
+    @abc.abstractmethod
+    async def before(self):
+        pass
+
+
+class BaseAccountAvatarOssViewModel(BaseOssViewModel):
+
+    def __init__(self, request: Request = None, need_auth: bool = True, access_title: list[UserTitleEnum] = None):
+        super().__init__(request, need_auth, access_title)
+        self.root = 'account-avatar'
+
+    @abc.abstractmethod
+    async def before(self):
+        pass
+
+    async def get_user_b64_avatar(self, avatar_info: ImageFileType) -> str:
+        return await self.get_b64_object(avatar_info.file_path, avatar_info.file_type)
+
+
+class BasePaymentViewModel(BaseOssViewModel):
+
+    def __init__(
+            self, payment_gateway: PaymentGatewayEnum, request: Request = None, need_auth: bool = True
+    ):
+        BaseViewModel.__init__(self, request, need_auth, access_title=[UserTitleEnum.ADMIN, UserTitleEnum.ORGANIZATION])
+        self.payment_gateway = payment_gateway
+
+    @abc.abstractmethod
+    async def before(self):
+        await super().before()
+
+    @asynccontextmanager
+    async def payment_execution(self, *args, **kwargs) -> MLPGTransactionApiController:
+        payment_gateway_category = self.user_configuration.get_payment_gateway_configuration(
+            self.payment_gateway
+        )
+        if not payment_gateway_category:
+            self.not_found('payment gateway not exist')
+        if not (authorization := payment_gateway_category.authorization):
+            self.not_found('payment gateway authorization not exist')
+        async with MLPGTransactionApiController(
+                self.payment_gateway, authorization.get('publicKey', ''), authorization.get('secretKey', ''),
+                *args, **kwargs
+        ) as controller:
+            yield controller
+
+    @staticmethod
+    async def get_payment_gateway_authorization(
+            category: PaymentGatewayEnum, origin_authorization: dict
+    ) -> tuple[str, str, dict]:
+        p_key, s_key, authorization = '', '', {}
+        match category:
+            case PaymentGatewayEnum.STRIPE:
+                p_key = origin_authorization.get('publicKey', '')
+                s_key = origin_authorization.get('secretKey', '')
+                authorization = {'publicKey': p_key, 'secretKey': s_key}
+        return p_key, s_key, authorization

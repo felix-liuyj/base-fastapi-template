@@ -1,0 +1,38 @@
+{% extends "base-template.html" %}
+
+{% block content %}
+    <h3 style="font-family: Helvetica, sans-serif; margin: 0 0 16px;">
+        Hello! <strong>{{ data.email }}</strong>!
+    </h3>
+    <p class="text-line">
+        Your Affiliation {{ data.affiliation }} has changed your event: {{ data.event_name }}'s {{ data.change_field }} to: <code>{{ data.change_value }}</code>
+    </p>
+    <p class="text-line">
+        The change reason is:
+    </p>
+    <table role="presentation" class="btn" style="box-sizing: border-box; width: 100%; min-width: 100%;">
+        <tbody>
+        <tr>
+            <td class="td-cell" style="padding-bottom: 16px;">
+                <table role="presentation" style="width: auto;">
+                    <tbody>
+                    <tr>
+                        <td class="td-cell" style="border-radius: 4px; text-align: center;">
+                            <code style="text-align: center">
+                                {{ data.reason }}
+                            </code>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="text-line">
+        Please Login the system to check it.
+    </p>
+    <p class="text-line">
+        We are glad you are here!
+    </p>
+{% endblock %}

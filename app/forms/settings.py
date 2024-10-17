@@ -1,12 +1,25 @@
-from fastapi import Body as _Body
-from pydantic import BaseModel as _BaseModel
+from typing import Optional
+
+from fastapi import Body
+from pydantic import BaseModel
 
 __all__ = (
+    'UpdateUserForm',
     'SetPasswordForm',
 )
 
 
-class SetPasswordForm(_BaseModel):
-    email: str = _Body(..., embed=True)
-    password: str = _Body(..., embed=True)
-    vCode: str = _Body(..., embed=True)
+class UpdateUserForm(BaseModel):
+    name: Optional[str] = Body('', embed=True, description='User name')
+    username: Optional[str] = Body('', embed=True, description='User display name')
+    disabled: Optional[bool] = Body(False, embed=True, description='Disabled, only can be used by admin')
+    vCode: Optional[str] = Body(
+        '', embed=True,
+        description='Email verification code, only needed when change field include email'
+    )
+
+
+class SetPasswordForm(BaseModel):
+    email: str = Body(..., embed=True)
+    password: str = Body(..., embed=True)
+    vCode: str = Body(..., embed=True)

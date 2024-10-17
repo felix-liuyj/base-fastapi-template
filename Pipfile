@@ -4,28 +4,38 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+fastapi = "*"
 uvicorn = "*"
+fastapi-cache2 = "*"
+email-validator = "*"
+python-dotenv = "*"
+python-dateutil = "*"
 pydantic = "*"
 bcrypt = "*"
 pycryptodome = "*"
-fastapi = "*"
 pyjwt = "*"
-motor = "*"
-beanie = "*"
 jinja2 = "*"
 pandas = "*"
 rich = "*"
 httpx = "*"
-web3 = "*"
-base58 = "*"
+# MongoDB
+motor = "*"
+beanie = "*"
+# Third Party
 aiokafka = "*"
 redis = "*"
-fastapi-cache2 = "*"
-python-dotenv = "*"
-python-dateutil = "*"
-python-jenkins = "*"
-email-validator = "*"
+# Automation Scheduler
+apscheduler = "*"
+# AliCloud SDK
+aliyun-python-sdk-bssopenapi = "2.0.3"
+aliyun-python-sdk-core-v3 = "2.13.33"
+alibabacloud_agency20221216 = "1.0.1"
+alibabacloud_bssopenapi20171214 = "2.2.2"
+alibabacloud_ram20150501 = "1.1.0"
+alibabacloud_sts20150401 = "1.1.4"
 oss2 = "*"
+# Testing
+faker = "*"
 
 [dev-packages]
 

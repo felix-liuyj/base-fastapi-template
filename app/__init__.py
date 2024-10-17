@@ -3,6 +3,7 @@ import pathlib
 from contextlib import asynccontextmanager
 
 from beanie import init_beanie
+from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -13,8 +14,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
-from app.libs.kafka import BaseConsumer
 from app.libs.custom import cus_print
+from app.libs.kafka import BaseConsumer
 from app.models import BaseDBModel
 
 __all__ = (
@@ -41,6 +42,9 @@ def create_app():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print('Check Encrypt Key...')
+    if not get_settings().ENCRYPT_KEY:
+        cus_print(f'Encrypt Key: {Fernet.generate_key().decode("utf-8")}, Please save it in config file', 'p')
     print('Load Core Application...')
     await init_cache()
     await register_routers(app)
@@ -51,6 +55,7 @@ async def lifespan(app: FastAPI):
             print("Startup complete")
             yield
     else:
+        print("Startup complete")
         yield
     mongo_client.close()
     print("Shutdown complete")
@@ -79,10 +84,10 @@ async def init_cache():
 
 async def register_routers(app: FastAPI):
     from app.api import router as root_router
-    from app.api.common import router as main_router
+    from app.api.settings import router as settings_router
 
     app.include_router(root_router)
-    app.include_router(main_router)
+    app.include_router(settings_router)
 
 
 async def initialize_mongodb_client():
@@ -96,11 +101,11 @@ async def initialize_mongodb_client():
 
 
 async def init_db(mongo_client: AsyncIOMotorClient):
-    import app.models.user as user_models
+    import app.models.common as common_user_models
     await init_beanie(
         database=getattr(mongo_client, get_settings().MONGODB_DB),
         document_models=[
-            *load_models_class(user_models),
+            *load_models_class(common_user_models),
         ]
     )
 
