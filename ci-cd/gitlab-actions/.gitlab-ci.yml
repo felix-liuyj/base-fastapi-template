@@ -1,0 +1,108 @@
+default:
+  tags:
+    - ubuntu-cmp
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+    - if: '$CI_COMMIT_REF_NAME == "sit"'
+    - if: '$CI_COMMIT_REF_NAME == "uat"'
+    - if: '$CI_COMMIT_REF_NAME == "develop"'
+    - when: never
+
+stages:
+  - scan_secrets
+  - login_to_acr
+  - build_artifacts
+  - scan_artifacts
+  - push_docker_artifacts
+
+variables:
+  TAR_PATH: "./image.tar"
+  KANIKO_IMAGE: "gcr.io/kaniko-project/executor:debug"
+  AZURE_ACR_NAME: "$AZURE_ACR_BASE_NAME$CI_COMMIT_REF_NAME"
+  AZURE_ACR_SERVER: "$AZURE_ACR_BASE_NAME$CI_COMMIT_REF_NAME.azurecr.io"
+  AZURE_ACR_USERNAME: "$AZURE_ACR_BASE_NAME$CI_COMMIT_REF_NAME"
+
+# 进行 Secret 扫描
+scan_secrets:
+  stage: scan_secrets
+  image: aquasec/trivy:latest
+  script:
+    - echo "Scanning for secrets in the project files..."
+    - trivy fs ${CI_PROJECT_DIR} --scanners secret --exit-code 1 --severity HIGH,CRITICAL --format json --output trivy-secrets-report.json
+  allow_failure: false
+  artifacts:
+    paths:
+      - trivy-secrets-report.json
+    when: always
+
+login_to_acr:
+  stage: login_to_acr
+  image: mcr.microsoft.com/azure-cli:latest
+  environment: $CI_COMMIT_REF_NAME
+  script:
+    - echo "Logging into Azure CLI..."
+    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+    - echo "Fetching ACR credentials..."
+    - echo "ACR_TOKEN=$(az acr login --name $AZURE_ACR_NAME --expose-token --query accessToken -o tsv)" >> build.env
+    - export IMAGE_NAME="$APP_NAME-$ENVIRONMENT";
+    - if [ -z "$ENVIRONMENT" ]; then
+      export IMAGE_TAG="release";
+      else
+      export IMAGE_TAG="$ENVIRONMENT-latest";
+      fi
+    - echo "IMAGE_NAME=$IMAGE_NAME" >> build.env
+    - echo "IMAGE_TAG=$IMAGE_TAG" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+    expire_in: 1h
+
+build_docker_image:
+  stage: build_artifacts
+  image:
+    name: $KANIKO_IMAGE
+    entrypoint: [ "" ]
+  script:
+    - echo "Building Docker image..."
+    - /kaniko/executor --context ${CI_PROJECT_DIR} --dockerfile ${CI_PROJECT_DIR}/Dockerfile --no-push --tar-path $TAR_PATH
+  artifacts:
+    paths:
+      - $TAR_PATH
+    expire_in: 1h
+  dependencies:
+    - login_to_acr
+
+scan_docker_image:
+  stage: scan_artifacts
+  image: aquasec/trivy:latest
+  script:
+    - echo "Scanning Docker image for vulnerabilities..."
+    - trivy image --input $TAR_PATH --exit-code 1 --severity HIGH,CRITICAL --format json --output docker-trivy-report.json
+  allow_failure: false
+  artifacts:
+    paths:
+      - docker-trivy-report.json
+    when: always
+  dependencies:
+    - build_docker_image
+
+push_docker_image_to_acr:
+  stage: push_docker_artifacts
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [ "" ]
+  environment: $CI_COMMIT_REF_NAME
+  script:
+    - echo "Logging into ACR for Docker image..."
+    - crane auth login $AZURE_ACR_SERVER --username 00000000-0000-0000-0000-000000000000 --password $ACR_TOKEN
+    - echo "Pushing Docker image to ACR..."
+    - echo "$AZURE_ACR_SERVER/$IMAGE_NAME:$CI_COMMIT_SHA"
+    - echo "$AZURE_ACR_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+    - crane push $TAR_PATH $AZURE_ACR_SERVER/$IMAGE_NAME:$CI_COMMIT_SHA
+    - crane push $TAR_PATH $AZURE_ACR_SERVER/$IMAGE_NAME:$IMAGE_TAG
+  dependencies:
+    - login_to_acr
+    - build_docker_image
+    - scan_docker_image

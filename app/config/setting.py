@@ -4,6 +4,7 @@ Context from Code Snippet E:/Projects/Python/binary-owl-python-backend/app/api/_
 import pathlib
 from functools import lru_cache
 
+from pydantic import HttpUrl
 # from pydantic import BaseSettings
 from pydantic.v1 import BaseSettings
 
@@ -46,6 +47,11 @@ class Settings(BaseSettings):
     KAFKA_CLUSTER_SASL_USERNAME: str | None
     KAFKA_CLUSTER_SASL_PASSWORD: str | None
 
+    REDIS_CONNECTION_STRING: str
+
+    COSMOS_DB_NAME: str
+    COSMOS_DB_CONNECTION_STRING: str
+
     MAIL_HOST: str
     MAIL_PORT: int
     MAIL_USERNAME: str
@@ -55,6 +61,23 @@ class Settings(BaseSettings):
     ALI_OSS_ACCESS_SECRET: str
     ALI_OSS_REGION: str
     ALI_OSS_BUCKET_NAME: str
+
+    AZURE_BLOB_ACCOUNT_NAME: str
+    AZURE_BLOB_ACCESS_TOKEN: str
+    AZURE_BLOB_CONTAINER_NAME: str
+
+    SSO_HKTDC_CLIENT_ID: str
+    SSO_HKTDC_CLIENT_SECRET: str
+    SSO_HKTDC_API_KEY: str
+    # SSO_HKTDC_REDIRECT_URI: str
+    SSO_HKTDC_REDIRECT_URI: HttpUrl
+    SSO_HKTDC_BASE_URL: HttpUrl
+
+    SSO_AZURE_CLIENT_ID: str
+    SSO_AZURE_CLIENT_SECRET: str
+    SSO_AZURE_CALLBACK_PATH: str
+    SSO_AZURE_REDIRECT_URI: HttpUrl
+    SSO_AZURE_BASE_URL: HttpUrl
 
     class Config:
         env_file = f'{pathlib.Path(__file__).resolve().parent.parent.parent}/.env'

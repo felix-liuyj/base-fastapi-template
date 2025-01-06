@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
+from app.libs.sso.azure import get_user_profile
+from app.models.account import UserProfile
 from app.models.common import UserModel
 from app.response import ResponseModel
 from app.response.root import StatusResponseData
-from app.view_models import get_current_user_config
 
 router = APIRouter(
     prefix='', tags=['Root API'], dependencies=[]
@@ -17,8 +18,9 @@ router = APIRouter(
 @router.get("/status", response_model=ResponseModel[StatusResponseData])
 async def check_runtime_status(
         settings: Annotated[Settings, Depends(get_settings)],
-        user_instance: Annotated[UserModel, Depends(get_current_user_config)]
+        user_profile: Annotated[UserProfile, Depends(get_user_profile)]
 ):
+    user_instance = await UserModel.find_one(UserModel.email == user_profile.altEmail)
     data = StatusResponseData(
         name=settings.APP_NAME, sever=True, database=user_instance is not None, redis=True, kafka=True
     )

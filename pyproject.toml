@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "hktdc-filmart-platform-backend"  # 替换为您的项目名称
+version = "0.1.0"
+description = "HKTDC Filmart Platform Backend"
+authors = ["Felix Liu <liuyongjun@materia-logic.com>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.13,<3.14"
+fastapi = "*"
+uvicorn = "*"
+pyjwt = "*"
+fastapi-cache2 = "*"
+email-validator = "*"
+python-dotenv = "*"
+python-dateutil = "*"
+pydantic = "*"
+bcrypt = "*"
+pycryptodome = "*"
+cryptography = "*"
+jinja2 = "*"
+pandas = "*"
+rich = "*"
+httpx = "*"
+python-multipart = "*"
+aiohttp = "*"
+
+# alicloud
+aliyun-python-sdk-bssopenapi = "2.0.3"
+aliyun-python-sdk-core-v3 = "2.13.33"
+alibabacloud_agency20221216 = "1.0.1"
+alibabacloud_bssopenapi20171214 = "2.2.2"
+alibabacloud_ram20150501 = "1.1.0"
+alibabacloud_sts20150401 = "1.1.4"
+
+# OSS
+azure-storage-blob = "*"
+oss2 = "*"
+
+# MongoDB
+motor = "*"
+beanie = "*"
+
+# Third Party
+redis = "*"
+aiokafka = "*"
+faker = "*"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.4.0"]
+build-backend = "poetry.core.masonry.api"

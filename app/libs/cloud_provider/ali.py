@@ -1,14 +1,5 @@
 import abc
 import base64
-
-from oss2 import Bucket, Auth, CaseInsensitiveDict, models as oss_models
-from oss2.exceptions import NoSuchKey
-from starlette.concurrency import run_in_threadpool
-
-from app.config import get_settings
-from app.libs.cloud_provider import BaseCloudProviderController
-from app.models import SupportImageMIMEType, SupportDataMIMEType
-import abc
 import math
 from typing import List
 
@@ -23,10 +14,16 @@ from alibabacloud_bssopenapi20171214.client import Client as BssOpenApiClient
 from alibabacloud_ram20150501 import models as ram_models
 from alibabacloud_ram20150501.client import Client as RamClient
 from alibabacloud_sts20150401.client import Client as StsClient
-from alibabacloud_tea_openapi.models import TeaModel, Config
+from alibabacloud_tea_openapi.models import Config
 from alibabacloud_tea_util.models import RuntimeOptions
 from aliyunsdkcore.acs_exception.exceptions import ClientException
+from oss2 import Bucket, Auth, CaseInsensitiveDict, models as oss_models
+from oss2.exceptions import NoSuchKey
+from starlette.concurrency import run_in_threadpool
 
+from app.config import get_settings
+from app.libs.cloud_provider import BaseCloudProviderController
+from app.models import SupportImageMIMEType, SupportDataMIMEType
 
 # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
 __all__ = (

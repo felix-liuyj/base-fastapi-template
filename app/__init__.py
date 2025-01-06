@@ -1,22 +1,25 @@
 import os
 import pathlib
+import re
 from contextlib import asynccontextmanager
 
 from beanie import init_beanie
 from cryptography.fernet import Fernet
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from motor.motor_asyncio import AsyncIOMotorClient
-from redis.asyncio import RedisCluster, Redis
-from redis.asyncio.cluster import ClusterNode
+from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
+from app.libs.constants import ResponseStatusCodeEnum, get_response_message
 from app.libs.custom import cus_print
-from app.libs.kafka import BaseConsumer
+from app.libs.sso import SSOProviderEnum
 from app.models import BaseDBModel
+from app.response import ResponseModel
 
 __all__ = (
     'create_app',
@@ -37,6 +40,7 @@ def create_app():
         allow_headers=['*'],
         expose_headers=['*']
     )
+    register_http_exception_handlers(app)
     return app
 
 
@@ -48,34 +52,24 @@ async def lifespan(app: FastAPI):
     print('Load Core Application...')
     await init_cache()
     await register_routers(app)
-    mongo_client = await initialize_mongodb_client()
+    mongo_client = AsyncIOMotorClient(get_settings().COSMOS_DB_CONNECTION_STRING)
     await init_db(mongo_client)
-    if get_settings().KAFKA_CLUSTER_BROKERS:
-        async with BaseConsumer():
-            print("Startup complete")
-            yield
-    else:
-        print("Startup complete")
-        yield
+    print("Startup complete")
+    yield
     mongo_client.close()
     print("Shutdown complete")
 
 
 async def init_cache():
-    if get_settings().REDIS_CLUSTER_NODE:
-        redis = RedisCluster(
-            startup_nodes=[ClusterNode(host=host, port=port) for host, port in [
-                node_config.split(':') for node_config in get_settings().REDIS_CLUSTER_NODE.split(',')
-            ]],
-            username=get_settings().REDIS_USERNAME, password=get_settings().REDIS_PASSWORD,
-            encoding="utf-8", decode_responses=True
-        )
-    else:
-        redis = Redis(
-            host=get_settings().REDIS_HOST, port=get_settings().REDIS_PORT,
-            username=get_settings().REDIS_USERNAME, password=get_settings().REDIS_PASSWORD,
-            encoding="utf-8", decode_responses=True
-        )
+    hp, pwd, ssl_conn, *_ = get_settings().REDIS_CONNECTION_STRING.split(',')
+    host, port = hp.split(':')
+    password, *_ = re.findall('=(.*)', pwd)
+    ssl_conn, *_ = re.findall('=(.*)', ssl_conn)
+    redis = Redis(
+        host=host, port=port, ssl=bool(ssl_conn.title()),
+        username='default', password=''.join(password),
+        encoding="utf-8", decode_responses=True
+    )
     FastAPICache.init(
         RedisBackend(redis),
         prefix=f'{"-".join(get_settings().APP_NAME.split(" "))}-{get_settings().APP_ENV}-cache'
@@ -84,28 +78,18 @@ async def init_cache():
 
 async def register_routers(app: FastAPI):
     from app.api import router as root_router
-    from app.api.settings import router as settings_router
+    from app.api.account import router as account_router
 
     app.include_router(root_router)
-    app.include_router(settings_router)
-
-
-async def initialize_mongodb_client():
-    return AsyncIOMotorClient(
-        host=get_settings().MONGODB_URI,
-        port=get_settings().MONGODB_PORT,
-        username=get_settings().MONGODB_USERNAME,
-        password=get_settings().MONGODB_PASSWORD,
-        authSource=get_settings().MONGODB_AUTHENTICATION_SOURCE
-    )
+    app.include_router(account_router)
 
 
 async def init_db(mongo_client: AsyncIOMotorClient):
-    import app.models.common as common_user_models
+    import app.models.account as user_models
     await init_beanie(
-        database=getattr(mongo_client, get_settings().MONGODB_DB),
+        database=getattr(mongo_client, get_settings().COSMOS_DB_NAME),
         document_models=[
-            *load_models_class(common_user_models),
+            *load_models_class(user_models),
         ]
     )
 
@@ -118,3 +102,16 @@ def load_models_class(module):
             class_list.append(module_class)
 
     return class_list
+
+
+def register_http_exception_handlers(app: FastAPI):
+    # 定义全局异常处理器，用于捕获 401 错误并重定向到 SSO 登录页面
+    app.add_exception_handler(401, custom_http_exception_handler)
+
+
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    if request.url.path.startswith('/admin'):
+        from app.libs.sso.azure import generate_sso_login_url
+    else:
+        from app.libs.sso.hktdc import generate_sso_login_url
+    return RedirectResponse(await generate_sso_login_url())

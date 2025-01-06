@@ -6,7 +6,8 @@ from app.libs.data_process_utils import BaseDataProcess
 
 __all__ = (
     'BaseCloudProviderController',
-    'AliCloudOssBucketController',
+    'AzureBlobController',
+    'AzureBlobUploadResult',
 )
 
 
@@ -26,4 +27,5 @@ class BaseCloudProviderController(BaseDataProcess):
         return str(uuid.uuid5(namespace, name))
 
 
+from .azure import *
 from .ali import *

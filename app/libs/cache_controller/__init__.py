@@ -3,10 +3,9 @@ from fastapi_cache import FastAPICache
 
 class BaseCacheController:
     def __init__(self):
-        self.backend = None
+        self.cache = FastAPICache.get_backend()
 
     async def __aenter__(self):
-        self.backend = FastAPICache.get_backend()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
