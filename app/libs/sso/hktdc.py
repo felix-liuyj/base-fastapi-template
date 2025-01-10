@@ -8,7 +8,7 @@ from jwt import decode as jwt_decode, InvalidTokenError, get_unverified_header, 
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
-from app.libs.cache_controller import RedisCacheController
+from app.libs.cache import RedisCacheController
 from app.libs.sso import SSOProviderEnum
 from app.models.account import UserProfile
 
@@ -40,7 +40,7 @@ class TokenData(BaseModel):
 
 async def generate_sso_login_url() -> str:
     import uuid
-    from app.libs.cache_controller import RedisCacheController
+    from app.libs.cache import RedisCacheController
 
     state = uuid.uuid4()
     request_id = uuid.uuid4()

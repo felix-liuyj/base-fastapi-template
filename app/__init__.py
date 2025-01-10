@@ -1,16 +1,12 @@
 import os
 import pathlib
-import re
 from contextlib import asynccontextmanager
 
 from beanie import init_beanie
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
 from motor.motor_asyncio import AsyncIOMotorClient
-from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
@@ -50,7 +46,6 @@ async def lifespan(app: FastAPI):
     if not get_settings().ENCRYPT_KEY:
         cus_print(f'Encrypt Key: {Fernet.generate_key().decode("utf-8")}, Please save it in config file', 'p')
     print('Load Core Application...')
-    await init_cache()
     await register_routers(app)
     mongo_client = AsyncIOMotorClient(get_settings().COSMOS_DB_CONNECTION_STRING)
     await init_db(mongo_client)
@@ -58,22 +53,6 @@ async def lifespan(app: FastAPI):
     yield
     mongo_client.close()
     print("Shutdown complete")
-
-
-async def init_cache():
-    hp, pwd, ssl_conn, *_ = get_settings().REDIS_CONNECTION_STRING.split(',')
-    host, port = hp.split(':')
-    password, *_ = re.findall('=(.*)', pwd)
-    ssl_conn, *_ = re.findall('=(.*)', ssl_conn)
-    redis = Redis(
-        host=host, port=port, ssl=bool(ssl_conn.title()),
-        username='default', password=''.join(password),
-        encoding="utf-8", decode_responses=True
-    )
-    FastAPICache.init(
-        RedisBackend(redis),
-        prefix=f'{"-".join(get_settings().APP_NAME.split(" "))}-{get_settings().APP_ENV}-cache'
-    )
 
 
 async def register_routers(app: FastAPI):

@@ -33,7 +33,7 @@ class TokenResponse(BaseModel):
 
 async def generate_sso_login_url() -> str:
     import uuid
-    from app.libs.cache_controller import RedisCacheController
+    from app.libs.cache import RedisCacheController
 
     state = str(uuid.uuid4())
     async with RedisCacheController() as cache:
