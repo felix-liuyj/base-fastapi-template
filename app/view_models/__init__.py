@@ -1,10 +1,6 @@
 import abc
 import json
-import ssl
 from datetime import datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP_SSL, SMTPException
 
 from dateutil.relativedelta import relativedelta
 from faker.proxy import Faker
@@ -57,23 +53,13 @@ class BaseViewModel(RedisCacheController):
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
         self.message = get_response_message(ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY)
         self.data = None
-
-    def __enter__(self):
-        try:
-            self.before()
-        except ViewModelRequestException:
-            pass
-        return ResponseModel(
-            category=self.category,
-            code=self.code,
-            message=self.message,
-            data=self.data
-        )
-        # return self
+        self.redis: RedisCacheController = None
 
     async def __aenter__(self):
         try:
-            await self.before()
+            async with RedisCacheController() as cache:
+                self.redis = cache
+                await self.before()
         except TimeoutException as e:
             self.request_timeout(str(e))
         except ViewModelRequestException:
@@ -84,12 +70,6 @@ class BaseViewModel(RedisCacheController):
             message=self.message,
             data=self.data
         )
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.after()
-        if exc_type:
-            cus_print(f'{exc_type}: {exc_val}', )
-        return True
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.after()
@@ -177,24 +157,6 @@ class BaseViewModel(RedisCacheController):
         self.message = get_response_message(ResponseStatusCodeEnum.SYSTEM_ERROR)
         self.data = msg
         raise ViewModelRequestException(message=msg)
-
-    @staticmethod
-    async def send_email(sender: str, receiver: str, body: str, subject: str = 'subject') -> bool:
-        try:
-            settings = get_settings()
-            message = MIMEMultipart("alternative")
-            message['From'] = sender
-            message['To'] = receiver
-            message['Subject'] = subject
-            message.attach(MIMEText(body, "html"))
-            context = ssl.create_default_context()
-            context.set_ciphers('DEFAULT')
-            with SMTP_SSL(settings.MAIL_HOST, settings.MAIL_PORT, context=context) as server:
-                server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
-                server.sendmail(settings.MAIL_USERNAME, receiver, message.as_string())
-            return True
-        except SMTPException:
-            return False
 
     @staticmethod
     def keys():

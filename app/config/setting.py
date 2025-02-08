@@ -52,10 +52,11 @@ class Settings(BaseSettings):
     COSMOS_DB_NAME: str
     COSMOS_DB_CONNECTION_STRING: str
 
-    MAIL_HOST: str
-    MAIL_PORT: int
-    MAIL_USERNAME: str
-    MAIL_PASSWORD: str
+    SMTP_API_HOST: str
+    SMTP_USERNAME: str
+    SMTP_API_USER: str
+    SMTP_API_KEY: str
+    SMTP_API_PORT: int
 
     ALI_OSS_ACCESS_KEY: str
     ALI_OSS_ACCESS_SECRET: str
@@ -66,18 +67,11 @@ class Settings(BaseSettings):
     AZURE_BLOB_ACCESS_TOKEN: str
     AZURE_BLOB_CONTAINER_NAME: str
 
-    SSO_HKTDC_CLIENT_ID: str
-    SSO_HKTDC_CLIENT_SECRET: str
-    SSO_HKTDC_API_KEY: str
-    # SSO_HKTDC_REDIRECT_URI: str
-    SSO_HKTDC_REDIRECT_URI: HttpUrl
-    SSO_HKTDC_BASE_URL: HttpUrl
-
     SSO_AZURE_CLIENT_ID: str
     SSO_AZURE_CLIENT_SECRET: str
     SSO_AZURE_CALLBACK_PATH: str
     SSO_AZURE_REDIRECT_URI: HttpUrl
-    SSO_AZURE_BASE_URL: HttpUrl
+    SSO_AZURE_BASE_URL: HttpUrlπ
 
     class Config:
         env_file = f'{pathlib.Path(__file__).resolve().parent.parent.parent}/.env'

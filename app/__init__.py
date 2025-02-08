@@ -14,7 +14,7 @@ from app.config import Settings, get_settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
 from app.libs.custom import cus_print
 from app.libs.sso import SSOProviderEnum
-from app.models import BaseDBModel
+from app.models import BaseDatabaseModel
 from app.response import ResponseModel
 
 __all__ = (
@@ -77,7 +77,7 @@ def load_models_class(module):
     class_list = []
     for model in module.__all__:
         module_class = getattr(module, model)
-        if module_class and issubclass(module_class, BaseDBModel):
+        if module_class and issubclass(module_class, BaseDatabaseModel):
             class_list.append(module_class)
 
     return class_list
@@ -89,8 +89,5 @@ def register_http_exception_handlers(app: FastAPI):
 
 
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
-    if request.url.path.startswith('/admin'):
-        from app.libs.sso.azure import generate_sso_login_url
-    else:
-        from app.libs.sso.hktdc import generate_sso_login_url
+    from app.libs.sso.azure import generate_sso_login_url
     return RedirectResponse(await generate_sso_login_url())

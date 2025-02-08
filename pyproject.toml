@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "hktdc-filmart-platform-backend"  # 替换为您的项目名称
+name = "base-fastapi-template"  # 替换为您的项目名称
 version = "0.1.0"
-description = "HKTDC Filmart Platform Backend"
-authors = ["Felix Liu <liuyongjun@materia-logic.com>"]
+description = "Base FastAPI Template"
+authors = ["Felix Liu <shenghuntianlang@outlook.com>"]
 license = "MIT"
 readme = "README.md"
 package-mode = false

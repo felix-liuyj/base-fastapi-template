@@ -5,7 +5,7 @@ from beanie import Indexed
 from pydantic import Field, EmailStr, HttpUrl, BaseModel
 from pymongo import ASCENDING
 
-from app.models import BaseDBModel, SupportImageMIMEType
+from app.models import BaseDatabaseModel, SupportImageMIMEType
 
 __all__ = (
     'UserModel',
@@ -243,7 +243,7 @@ class IPCompanyDataType(BaseModel):
     companyBoothNo: str = Field(..., description="Company booth number 公司展位号")
 
 
-class UserModel(BaseDBModel):
+class UserModel(BaseDatabaseModel):
     # special string type that validates the email as a string
     ssoUid: Annotated[str, Indexed(str, unique=True)] = Field(..., description='User SSO ID')
     email: Annotated[EmailStr, Indexed(EmailStr, unique=True)] = Field(..., description='User email')
@@ -272,7 +272,7 @@ class UserModel(BaseDBModel):
         return result
 
 
-class AdminModel(BaseDBModel):
+class AdminModel(BaseDatabaseModel):
     email: Annotated[EmailStr, Indexed(EmailStr, unique=True)] = Field(..., description='User email')
     role: AdminRoleEnum = Field(default=AdminRoleEnum.GENERAL, description='Admin role')
 

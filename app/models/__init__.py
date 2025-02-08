@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -11,7 +11,7 @@ from app.libs.custom import encrypt, decrypt
 
 __all__ = (
     'Set',
-    'BaseDBModel',
+    'BaseDatabaseModel',
     'SupportImageMIMEType',
     'SupportDataMIMEType',
 )
@@ -47,9 +47,9 @@ class SupportImageMIMEType(Enum):
                 return cls(value)
 
 
-class BaseDBModel(Document):
-    createdAt: datetime = Field(default_factory=lambda: datetime.now())
-    updatedAt: datetime = Field(default_factory=lambda: datetime.now())
+class BaseDatabaseModel(Document):
+    createdAt: datetime = Field(default_factory=datetime.now)
+    updatedAt: datetime = Field(default_factory=datetime.now)
 
     def keys(self):
         return list(self.model_fields.keys())
@@ -61,11 +61,6 @@ class BaseDBModel(Document):
     def sid(self) -> str:
         return str(self.id)
 
-    @property
-    def data_expired(self) -> bool:
-        oldest_data_validity_time = datetime.now() - timedelta(seconds=get_settings().DATA_REFRESH_SECONDS)
-        return self.updatedAt < oldest_data_validity_time.replace(tzinfo=self.updatedAt.tzinfo)
-
     @after_event(Update)
     async def refresh_update_at(self):
         self.updatedAt = datetime.now()
@@ -75,7 +70,7 @@ class BaseDBModel(Document):
             kwargs.update({key: encrypt(val, get_settings().ENCRYPT_KEY) for key, val in encrypt_fields.items()})
 
         kwargs.update(updatedAt=datetime.now())
-        await self.set(kwargs)
+        return await self.set(kwargs)
 
     async def get_encrypted_fields(self, encrypted_field: str) -> Any | None:
         if not getattr(self, encrypted_field):

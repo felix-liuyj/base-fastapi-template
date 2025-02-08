@@ -7,7 +7,7 @@ from pymongo import HASHED
 
 from app.config import get_settings
 from app.libs.custom import decrypt
-from app.models import BaseDBModel
+from app.models import BaseDatabaseModel
 from app.models import SupportImageMIMEType
 
 __all__ = (
@@ -21,7 +21,7 @@ class ImageFileType(BaseModel):
     file_type: SupportImageMIMEType
 
 
-class UserModel(BaseDBModel):
+class UserModel(BaseDatabaseModel):
     # special string type that validates the email as a string
     email: Annotated[EmailStr, Indexed(EmailStr, unique=True)] = Field(..., description='User email')
     name: str = Field(..., description='User name (administrator name, organization name or volunteer name)')

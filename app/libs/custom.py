@@ -5,19 +5,13 @@ import asyncio
 import json
 import os
 import pathlib
-import ssl
 from contextlib import contextmanager, asynccontextmanager
 from datetime import datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from smtplib import SMTP_SSL, SMTPException
 from socket import socket, AF_INET, SOCK_DGRAM
 
 from cryptography.fernet import Fernet
 from jinja2 import Environment, FileSystemLoader
 from rich.console import Console
-
-from app.config import get_settings
 
 __all__ = (
     'timing',
@@ -44,7 +38,6 @@ __all__ = (
     'serialize',
     'deserialize',
     'render_template',
-    'send_email',
 )
 
 console = Console()
@@ -287,25 +280,3 @@ def render_template(template_name: str, **render_data: dict) -> str:
     template = env.get_template(template_name)
     # Call the template's render method, pass in the data, and get the final document.
     return template.render({'data': render_data})
-
-
-def send_email(sender: str, receiver: str, body: str, subject: str = 'subject') -> bool:
-    try:
-        settings = get_settings()
-        message = MIMEMultipart("alternative")
-        message['From'] = sender
-        message['To'] = receiver
-        message['Subject'] = subject
-
-        part = MIMEText(body, "html")
-        message.attach(part)
-
-        context = ssl.create_default_context()
-        context.set_ciphers('DEFAULT')
-
-        with SMTP_SSL(settings.MAIL_HOST, settings.MAIL_PORT, context=context) as server:
-            server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
-            server.sendmail(settings.MAIL_USERNAME, receiver, message.as_string())
-        return True
-    except SMTPException:
-        return False
