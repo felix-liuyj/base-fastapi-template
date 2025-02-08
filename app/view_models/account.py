@@ -1,11 +1,7 @@
-import base64
-
 import httpx
 from fastapi import Request, HTTPException
 
-from app.config import get_settings
 from app.libs.sso import generate_un_auth_exception, SSOProviderEnum
-from app.libs.sso.hktdc import parse_oauth_jwt, get_user_profile
 from app.models.account import UserTitleEnum, UserStatusEnum, UserModel, UserProfile
 from app.view_models import BaseViewModel
 
@@ -47,39 +43,9 @@ class AccountAuthCallbackViewModel(BaseViewModel):
 
     async def check_code(self, request_id: str):
         try:
-            api_response = await self.fetch_token_response_data(request_id)
-            token_data = await parse_oauth_jwt(api_response.idToken)
-            await self.redis.set(api_response.accessToken, token_data.email, ex=api_response.expiresIn)
-            if not (user_profile := await get_user_profile(api_response.accessToken)):
-                raise generate_un_auth_exception('Invalid token', SSOProviderEnum.HKTDC)
-            if not await UserModel.find_one(UserModel.email == token_data.email):
-                await UserModel.insert_one(UserModel(
-                    ssoUid=user_profile.ssouid, email=user_profile.basicProfile.emailId,
-                    name=user_profile.basicProfile.firstName, title=UserTitleEnum.SELLER,
-                    username=f'{user_profile.basicProfile.firstName}{user_profile.basicProfile.lastName}'
-                ))
-            self.operating_successfully(api_response)
+            self.operating_successfully(True)
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail="Token exchange failed")
-
-    async def fetch_token_response_data(self, request_id: str):
-        # 请求令牌端点
-        async with httpx.AsyncClient() as client:
-            credentials = f'{get_settings().SSO_HKTDC_CLIENT_ID}:{get_settings().SSO_HKTDC_CLIENT_SECRET}'
-            response = await client.post(
-                f"{get_settings().SSO_HKTDC_BASE_URL}/uaa/oauth2/token",
-                data={
-                    "grant_type": "authorization_code",
-                    "scope": 'openid /v2/shared-services/management/user-profile.readonly',
-                    "code": self.code, "redirect_uri": str(get_settings().SSO_HKTDC_REDIRECT_URI),
-                },
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "x-request-id": f'CON-{request_id}',
-                    'Authorization': f'Basic {base64.b64encode(credentials.encode("utf-8")).decode("utf-8")}'
-                }
-            )
-        return response.raise_for_status().json()
 
 
 class UserInfoGetViewModel(BaseViewModel):

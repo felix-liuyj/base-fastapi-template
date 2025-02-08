@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Query, Depends
 from fastapi.responses import RedirectResponse
 
 from app.config import Settings, get_settings
-from app.libs.sso.hktdc import get_user_profile, generate_sso_login_url
+from app.libs.sso.azure import get_user_profile, generate_sso_login_url
 from app.models.account import UserProfile
 from app.response import ResponseModel
 from app.view_models.account import *
