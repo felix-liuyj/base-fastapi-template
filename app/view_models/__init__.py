@@ -98,64 +98,84 @@ class BaseViewModel(RedisCacheController):
     def user_title(self):
         return self.user_instance.title
 
-    def operating_successfully(self, data: str | dict | list):
+    def operating_successfully(self, data: str | dict | list, handled: bool = False):
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
         self.message = get_response_message(ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY)
         self.data = data
+        if handled:
+            return
         raise ViewModelRequestException(message=data)
 
-    def empty_content(self, data: str | dict | list):
+    def empty_content(self, data: str | dict | list, handled: bool = False):
         self.code = ResponseStatusCodeEnum.EMPTY_CONTENT.value
         self.message = get_response_message(ResponseStatusCodeEnum.EMPTY_CONTENT)
         self.data = data
+        if handled:
+            return
         raise ViewModelRequestException(message=data)
 
-    def nothing_changed(self, data: str | dict | list):
+    def nothing_changed(self, data: str | dict | list, handled: bool = False):
         self.code = ResponseStatusCodeEnum.NOTHING_CHANGED.value
         self.message = get_response_message(ResponseStatusCodeEnum.NOTHING_CHANGED)
         self.data = data
+        if handled:
+            return
         raise ViewModelRequestException(message=data)
 
-    def operating_failed(self, msg: str):
+    def operating_failed(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.OPERATING_FAILED.value
         self.message = get_response_message(ResponseStatusCodeEnum.OPERATING_FAILED)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def unauthorized(self, msg: str):
+    def unauthorized(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.UNAUTHORIZED.value
         self.message = get_response_message(ResponseStatusCodeEnum.UNAUTHORIZED)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def forbidden(self, msg: str):
+    def forbidden(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.FORBIDDEN.value
         self.message = get_response_message(ResponseStatusCodeEnum.FORBIDDEN)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def not_found(self, msg: str):
+    def not_found(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.NOT_FOUND.value
         self.message = get_response_message(ResponseStatusCodeEnum.NOT_FOUND)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def illegal_parameters(self, msg: str):
+    def illegal_parameters(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.ILLEGAL_PARAMETERS.value
         self.message = get_response_message(ResponseStatusCodeEnum.ILLEGAL_PARAMETERS)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def request_timeout(self, msg: str):
+    def request_timeout(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.REQUEST_TIMEOUT.value
         self.message = get_response_message(ResponseStatusCodeEnum.REQUEST_TIMEOUT)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
-    def system_error(self, msg: str):
+    def system_error(self, msg: str, handled: bool = False):
         self.code = ResponseStatusCodeEnum.SYSTEM_ERROR.value
         self.message = get_response_message(ResponseStatusCodeEnum.SYSTEM_ERROR)
         self.data = msg
+        if handled:
+            return
         raise ViewModelRequestException(message=msg)
 
     @staticmethod
