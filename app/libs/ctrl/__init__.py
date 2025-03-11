@@ -6,7 +6,7 @@ from typing import List
 import pandas as pd
 from requests.exceptions import SSLError
 
-from .custom import cus_print
+from ..custom import cus_print
 
 
 class BaseDataProcess:

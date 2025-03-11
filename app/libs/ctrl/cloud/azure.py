@@ -8,7 +8,7 @@ from azure.storage.blob.aio import BlobServiceClient, ContainerClient
 from pydantic import BaseModel
 
 from app.config import get_settings  # 假设有一个 settings 文件
-from app.libs.cloud_provider import BaseCloudProviderController
+from app.libs.ctrl.cloud import BaseCloudProviderController
 
 __all__ = (
     'AzureBlobController',

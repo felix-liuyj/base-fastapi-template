@@ -8,7 +8,7 @@ from httpx import HTTPStatusError
 from pydantic import BaseModel, ValidationError, Field, EmailStr
 
 from app.config import get_settings
-from app.libs.cache import RedisCacheController
+from app.libs.ctrl.db import RedisCacheController
 from app.libs.sso import OptionalOAuth2AuthorizationCodeBearer
 
 oauth2_scheme = OptionalOAuth2AuthorizationCodeBearer(

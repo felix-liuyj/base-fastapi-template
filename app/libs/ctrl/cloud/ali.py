@@ -22,7 +22,7 @@ from oss2.exceptions import NoSuchKey
 from starlette.concurrency import run_in_threadpool
 
 from app.config import get_settings
-from app.libs.cloud_provider import BaseCloudProviderController
+from app.libs.ctrl.cloud import BaseCloudProviderController
 from app.models import SupportImageMIMEType, SupportDataMIMEType
 
 # 使用环境变量中获取的RAM用户的访问密钥配置访问凭证。
@@ -204,7 +204,7 @@ class AliCloudBillController(BaseAliCloudProviderController, BssOpenApiClient):
         @param billing_cycle: Support accuracy in months or days
         @param account_id: bill owner id
         @param next_token: sdk function pagination token, only for recursion use, No need to explicitly pass in
-        @return: None, use controller instance's result property to get the bill result
+        @return: None, use ctrl instance's result property to get the bill result
         """
         request_body = {
             'bill_owner_id': account_id, 'billing_cycle': billing_cycle,
@@ -230,7 +230,7 @@ class AliCloudBillController(BaseAliCloudProviderController, BssOpenApiClient):
 
     async def fetch_product_list(self):
         """
-        @return: None, use controller instance's result property to get the product list
+        @return: None, use ctrl instance's result property to get the product list
         """
         request = bss_models.QueryProductListRequest(
             query_total_count=True, page_num=self._page_no, page_size=self._page_size

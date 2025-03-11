@@ -8,8 +8,8 @@ from fastapi import Request, BackgroundTasks, UploadFile
 from httpx import TimeoutException
 
 from app.config import get_settings
-from app.libs.cache import RedisCacheController
-from app.libs.cloud_provider import AzureBlobController, AzureBlobUploadResult
+from app.libs.ctrl.db import RedisCacheController
+from app.libs.ctrl.cloud import AzureBlobController, AzureBlobUploadResult
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
 from app.libs.custom import cus_print
 from app.models import SupportImageMIMEType

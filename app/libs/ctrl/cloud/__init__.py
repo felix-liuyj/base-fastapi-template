@@ -2,7 +2,7 @@ import abc
 import socket
 import uuid
 
-from app.libs.data_process_utils import BaseDataProcess
+from app.libs.ctrl import BaseDataProcess
 
 __all__ = (
     'BaseCloudProviderController',

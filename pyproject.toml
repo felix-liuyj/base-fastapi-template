@@ -2,32 +2,37 @@
 name = "base-fastapi-template"  # 替换为您的项目名称
 version = "0.1.0"
 description = "Base FastAPI Template"
-authors = ["Felix Liu <shenghuntianlang@outlook.com>"]
+authors = ["Felix Liu <felixliuyj@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
+# 核心依赖
 python = ">=3.13,<3.14"
-fastapi = "*"
-uvicorn = "*"
-pyjwt = "*"
-fastapi-cache2 = "*"
-email-validator = "*"
 python-dotenv = "*"
 python-dateutil = "*"
-pydantic = "*"
+
+# Web框架与API
+fastapi = "*"
+uvicorn = "*"
+jinja2 = "*"
+python-multipart = "*"
+httpx = "*"
+aiohttp = "*"
+
+# 认证与安全
+pyjwt = "*"
 bcrypt = "*"
 pycryptodome = "*"
 cryptography = "*"
-jinja2 = "*"
-pandas = "*"
-rich = "*"
-httpx = "*"
-python-multipart = "*"
-aiohttp = "*"
+email-validator = "*"
 
-# alicloud
+# 数据处理
+pydantic = "*"
+pandas = "*"
+
+# 阿里云服务
 aliyun-python-sdk-bssopenapi = "2.0.3"
 aliyun-python-sdk-core-v3 = "2.13.33"
 alibabacloud_agency20221216 = "1.0.1"
@@ -35,18 +40,22 @@ alibabacloud_bssopenapi20171214 = "2.2.2"
 alibabacloud_ram20150501 = "1.1.0"
 alibabacloud_sts20150401 = "1.1.4"
 
-# OSS
+# 对象存储
 azure-storage-blob = "*"
 oss2 = "*"
 
-# MongoDB
+# 数据库
 motor = "*"
 beanie = "*"
-
-# Third Party
 redis = "*"
+
+# 消息队列
 aiokafka = "*"
+
+# 工具与辅助
+rich = "*"
 faker = "*"
+aiosmtplib = "*"
 
 [tool.poetry.group.dev.dependencies]
 

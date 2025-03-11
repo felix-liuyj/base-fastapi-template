@@ -4,8 +4,7 @@ Context from Code Snippet E:/Projects/Python/binary-owl-python-backend/app/api/_
 import pathlib
 from functools import lru_cache
 
-from pydantic import HttpUrl
-# from pydantic import BaseSettings
+from pydantic import AnyHttpUrl
 from pydantic.v1 import BaseSettings
 
 __all__ = (
@@ -52,11 +51,11 @@ class Settings(BaseSettings):
     COSMOS_DB_NAME: str
     COSMOS_DB_CONNECTION_STRING: str
 
-    SMTP_API_HOST: str
+    SMTP_HOST: str
     SMTP_USERNAME: str
     SMTP_API_USER: str
-    SMTP_API_KEY: str
-    SMTP_API_PORT: int
+    SMTP_PASSWORD: str
+    SMTP_PORT: int
 
     ALI_OSS_ACCESS_KEY: str
     ALI_OSS_ACCESS_SECRET: str
@@ -70,8 +69,8 @@ class Settings(BaseSettings):
     SSO_AZURE_CLIENT_ID: str
     SSO_AZURE_CLIENT_SECRET: str
     SSO_AZURE_CALLBACK_PATH: str
-    SSO_AZURE_REDIRECT_URI: HttpUrl
-    SSO_AZURE_BASE_URL: HttpUrlπ
+    SSO_AZURE_REDIRECT_URI: AnyHttpUrl
+    SSO_AZURE_BASE_URL: AnyHttpUrl
 
     class Config:
         env_file = f'{pathlib.Path(__file__).resolve().parent.parent.parent}/.env'
