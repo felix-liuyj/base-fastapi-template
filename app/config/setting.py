@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     COOKIE_KEY: str
     ENCRYPT_KEY: str | None
     DATA_REFRESH_SECONDS: int
+    DATA_PUSH_INTERVAL: int
     FRONTEND_DOMAIN: str
     PAYMENT_GATEWAY_DOMAIN: str
     ISA_DOMAIN: str

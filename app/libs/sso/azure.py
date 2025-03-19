@@ -133,18 +133,18 @@ async def generate_sso_login_url() -> str:
     return f"{get_settings().SSO_AZURE_BASE_URL}/oauth2/v2.0/authorize?{urlencode(auth_params)}"
 
 
-async def get_user_profile(access_token: Optional[str] = Depends(oauth2_scheme)) -> AdminProfile | None:
+async def get_user_profile(access_token: Optional[str] = Depends(oauth2_scheme)) -> AzureSSOUser | None:
     if not access_token:
         return None
     try:
         async with RedisCacheController() as cache:
             if admin_profile_json := await cache.get(access_token):
-                return AdminProfile.model_validate_json(admin_profile_json)
+                return AzureSSOUser.model_validate_json(admin_profile_json)
             async with httpx.AsyncClient() as client:
                 response = await client.get("https://graph.microsoft.com/v1.0/me", headers={
                     "Authorization": f"Bearer {access_token}"
                 })
-                admin_profile = AdminProfile.model_validate(response.raise_for_status().json())
+                admin_profile = AzureSSOUser.model_validate(response.raise_for_status().json())
                 await cache.set(access_token, admin_profile.model_dump_json(), ex=60 * 60 * 12)
                 return admin_profile
     except HTTPException:

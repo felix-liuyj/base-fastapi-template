@@ -10,7 +10,7 @@ from app.response import ResponseModel
 from app.view_models.account import *
 
 router = APIRouter(
-    prefix='/auth', tags=['Account API'], dependencies=[]
+    prefix='/account', tags=['Account API'], dependencies=[]
 )
 
 
