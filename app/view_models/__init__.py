@@ -13,7 +13,7 @@ from app.libs.ctrl.cloud import AzureBlobController, AzureBlobUploadResult
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
 from app.libs.custom import cus_print
 from app.models import SupportImageMIMEType
-from app.models.account import UserModel, UserProfile, AdminRoleEnum, AdminProfile, AdminModel, UserTitleEnum
+from app.models.account import UserModel, UserProfile, AdminRoleEnum, AdminProfile, AdminModel, UserTypeEnum
 from app.response import ResponseModel
 
 __all__ = (
@@ -40,14 +40,14 @@ class BaseViewModel(RedisCacheController):
 
     def __init__(
             self, request: Request = None, user_profile: UserProfile | AdminProfile = None,
-            access_title: list[UserTitleEnum | AdminRoleEnum] = None, bg_tasks: BackgroundTasks = None
+            access_title: list[UserTypeEnum | AdminRoleEnum] = None, bg_tasks: BackgroundTasks = None
     ):
         super().__init__()
         self.request: Request = request
         self.bg_tasks: BackgroundTasks = bg_tasks
         self.user_profile: UserProfile | AdminProfile = user_profile
         self.user_instance: UserModel | AdminModel = None
-        self.access_title: UserTitleEnum | AdminRoleEnum = access_title
+        self.access_title: UserTypeEnum | AdminRoleEnum = access_title
         self.faker = Faker()
         self.category = get_settings().APP_NO
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value
@@ -84,7 +84,7 @@ class BaseViewModel(RedisCacheController):
         if self.access_title:
             if not self.user_instance:
                 self.forbidden('User not have access')
-            if self.user_instance.title not in self.access_title:
+            if self.user_instance.userType not in self.access_title:
                 self.forbidden('User not have access')
 
     async def after(self):
@@ -96,7 +96,7 @@ class BaseViewModel(RedisCacheController):
 
     @property
     def user_title(self):
-        return self.user_instance.title
+        return self.user_instance.userType
 
     def operating_successfully(self, data: str | dict | list, handled: bool = False):
         self.code = ResponseStatusCodeEnum.OPERATING_SUCCESSFULLY.value

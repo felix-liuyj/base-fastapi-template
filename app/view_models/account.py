@@ -2,14 +2,14 @@ import httpx
 from fastapi import Request, HTTPException
 
 from app.libs.sso import generate_un_auth_exception, SSOProviderEnum
-from app.models.account import UserTitleEnum, UserStatusEnum, UserModel, UserProfile
+from app.models.account import UserTypeEnum, UserStatusEnum, UserModel, UserProfile
 from app.view_models import BaseViewModel
 
 __all__ = (
     'UserLogoutViewModel',
     'AccountAuthCallbackViewModel',
-    'UserInfoGetViewModel',
-    'UserInfoListGetViewModel',
+    'UserInfoQueryViewModel',
+    'UserInfoListQueryViewModel',
     'ChangeUserStatusViewModel',
     'VerificationCodeSendViewModel',
 )
@@ -48,7 +48,7 @@ class AccountAuthCallbackViewModel(BaseViewModel):
             raise HTTPException(status_code=e.response.status_code, detail="Token exchange failed")
 
 
-class UserInfoGetViewModel(BaseViewModel):
+class UserInfoQueryViewModel(BaseViewModel):
     def __init__(self, request: Request, user_profile: UserProfile):
         super().__init__(request=request, user_profile=user_profile)
         self.user_data = user_profile
@@ -62,9 +62,9 @@ class UserInfoGetViewModel(BaseViewModel):
         )
 
 
-class UserInfoListGetViewModel(BaseViewModel):
+class UserInfoListQueryViewModel(BaseViewModel):
     def __init__(self, request: Request):
-        super().__init__(request=request, access_title=[UserTitleEnum.BUYER, UserTitleEnum.SELLER])
+        super().__init__(request=request, access_title=[UserTypeEnum.BUYER, UserTypeEnum.SELLER])
 
     async def before(self):
         await super().before()
@@ -75,7 +75,7 @@ class UserInfoListGetViewModel(BaseViewModel):
 
 class ChangeUserStatusViewModel(BaseViewModel):
     def __init__(self, email: str, enable: bool, reason: str, request: Request):
-        super().__init__(request=request, access_title=[UserTitleEnum.BUYER, UserTitleEnum.SELLER])
+        super().__init__(request=request, access_title=[UserTypeEnum.BUYER, UserTypeEnum.SELLER])
         self.email = email
         self.enable = enable
         self.reason = reason

@@ -17,7 +17,7 @@ class RedisCacheController(Redis):
         password, *_ = re.findall('=(.*)', pwd)
         ssl_conn, *_ = re.findall('=(.*)', ssl_conn)
         await Redis.__init__(
-            self, host=host, port=port, ssl=bool(ssl_conn.title()),
+            self, host=host, port=port, ssl=bool(ssl_conn.userType()),
             username='default', password=''.join(password),
             encoding="utf-8", decode_responses=True
         )

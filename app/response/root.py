@@ -11,3 +11,16 @@ class StatusResponseData(BaseModel):
     database: bool = Field(..., embed=True, description='Event start time')
     redis: bool = Field(..., embed=True, description='Event end time')
     kafka: bool = Field(..., embed=True, description='Event end time')
+
+    class Config:
+        schema_extra = {
+            'examples': [
+                {
+                    'name': 'Event name',
+                    'sever': True,
+                    'database': True,
+                    'redis': True,
+                    'kafka': True
+                }
+            ]
+        }

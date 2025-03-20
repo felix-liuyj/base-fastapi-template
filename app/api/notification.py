@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Request
+from fastapi import Request
 
+from app.libs.constants import CustomApiRouter
 from app.libs.response import create_event_stream_response
 from app.response import ResponseModel
 from app.view_models.notification import NotificationGenerateViewModel
@@ -8,7 +9,7 @@ __all__ = (
     'router',
 )
 
-router = APIRouter(
+router = CustomApiRouter(
     prefix='/auth', tags=['Account API'], dependencies=[]
 )
 

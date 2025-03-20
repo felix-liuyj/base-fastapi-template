@@ -6,15 +6,16 @@ from starlette.responses import StreamingResponse
 from app.response import ResponseModel
 
 __all__ = (
+    'create_response',
     'create_event_stream_response',
 )
 
 VMT = TypeVar("VMT", bound="BaseViewModel")
 
 
-async def create_response(view_model: VMT, *args, **kwargs) -> ResponseModel:
+async def create_response(view_model: VMT, response_handler: callable = None, *args, **kwargs) -> ResponseModel:
     async with view_model(*args, *kwargs) as response:
-        return response
+        return response_handler(response) if response_handler else response
 
 
 async def create_event_stream_response(view_model: VMT, *args, **kwargs) -> StreamingResponse:

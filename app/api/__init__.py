@@ -1,16 +1,20 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import Depends
 
 from app.config import Settings, get_settings
-from app.libs.constants import ResponseStatusCodeEnum, get_response_message
+from app.libs.constants import ResponseStatusCodeEnum, get_response_message, CustomApiRouter
 from app.libs.sso.azure import get_user_profile
 from app.models.account import UserProfile
 from app.models.common import UserModel
 from app.response import ResponseModel
 from app.response.root import StatusResponseData
 
-router = APIRouter(
+__all__ = (
+    'router',
+)
+
+router = CustomApiRouter(
     prefix='', tags=['Root API'], dependencies=[]
 )
 

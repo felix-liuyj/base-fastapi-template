@@ -1,9 +1,11 @@
 from enum import Enum
 from functools import lru_cache
 
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 __all__ = (
+    'CustomApiRouter',
     'ApiResponse',
     'ResponseStatusCodeEnum',
     'ResponseMessageMap',
@@ -37,6 +39,39 @@ class ResponseMessageMap:
     METHOD_NOT_ALLOWED = "Method Not Allowed"
     REQUEST_TIMEOUT = "Request Timeout"
     SYSTEM_ERROR = "System Error"
+
+
+class CustomApiRouter(APIRouter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def api_route(self, *args, **kwargs):
+        from app.config import get_settings
+        from app.response import IllegalParametersResponseModel, InternalServerErrorResponseModel
+        responses = (kwargs.get('responses', {}) or {}) | {
+            422: {
+                'description': 'Illegal Parameters',
+                'model': IllegalParametersResponseModel,
+                'content': {
+                    'category': get_settings().APP_NO,
+                    'code': ResponseStatusCodeEnum.ILLEGAL_PARAMETERS.value,
+                    'message': get_response_message(ResponseStatusCodeEnum.ILLEGAL_PARAMETERS),
+                    'data': ["query → errorFieldName: Error message"]
+                }
+            },
+            500: {
+                'description': 'Internal Server Error',
+                'model': InternalServerErrorResponseModel,
+                'content': {
+                    'category': get_settings().APP_NO,
+                    'code': ResponseStatusCodeEnum.SYSTEM_ERROR.value,
+                    'message': get_response_message(ResponseStatusCodeEnum.SYSTEM_ERROR),
+                    'data': 'Detail error message'
+                }
+            }
+        }
+        kwargs.update(responses=responses)
+        return super().api_route(*args, **kwargs)
 
 
 class ApiResponse(BaseModel):

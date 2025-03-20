@@ -17,7 +17,7 @@ __all__ = (
     'IPCompanyDataType',
     'IPCompanyNameDataType',
     'UserStatusEnum',
-    'UserTitleEnum',
+    'UserTypeEnum',
     'UserModifyStatusEnum',
     'CertificationItemFileType',
     'SupportCertificateMIMEType',
@@ -55,7 +55,7 @@ class UserModifyStatusEnum(Enum):
     REJECTED = 'rejected'
 
 
-class UserTitleEnum(Enum):
+class UserTypeEnum(Enum):
     SELLER = 'seller'
     BUYER = 'buyer'
 
@@ -249,7 +249,7 @@ class UserModel(BaseDatabaseModel):
     email: Annotated[EmailStr, Indexed(EmailStr, unique=True)] = Field(..., description='User email')
     name: str = Field(..., description='User name (administrator name, organization name or volunteer name)')
     username: str = Field(..., description='User display name')
-    title: UserTitleEnum = Field(default=UserTitleEnum.BUYER, description='User title')
+    userType: UserTypeEnum = Field(default=UserTypeEnum.BUYER, description='User user type')
     affiliation: Optional[str] = Field(None, description='User affiliation, source from user email or team id')
     status: UserStatusEnum = Field(default=UserStatusEnum.NEEDS_APPROVAL, description='User status')
     company: Optional[IPCompanyDataType | None] = Field(None, description='User payment gateway configuration')
@@ -267,7 +267,7 @@ class UserModel(BaseDatabaseModel):
             'email': self.email,
             'name': self.name,
             'username': self.username,
-            'title': self.title.name.title(),
+            'userType': self.userType.name.title(),
         }
         return result
 
