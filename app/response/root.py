@@ -6,21 +6,8 @@ __all__ = (
 
 
 class StatusResponseData(BaseModel):
-    name: str = Field(..., embed=True, description='Event name')
-    sever: bool = Field(..., embed=True, description='Event Fundraising Licence Number')
-    database: bool = Field(..., embed=True, description='Event start time')
-    redis: bool = Field(..., embed=True, description='Event end time')
-    kafka: bool = Field(..., embed=True, description='Event end time')
-
-    class Config:
-        schema_extra = {
-            'examples': [
-                {
-                    'name': 'Event name',
-                    'sever': True,
-                    'database': True,
-                    'redis': True,
-                    'kafka': True
-                }
-            ]
-        }
+    name: str = Field(..., description='Event name')
+    sever: bool = Field(..., description='Event Fundraising Licence Number')
+    database: bool = Field(..., description='Event start time')
+    redis: bool = Field(..., description='Event end time')
+    kafka: bool = Field(..., description='Event end time')
