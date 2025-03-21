@@ -13,7 +13,7 @@ __all__ = (
 VMT = TypeVar("VMT", bound="BaseViewModel")
 
 
-async def create_response(view_model: VMT, response_handler: callable = None, *args, **kwargs) -> ResponseModel:
+async def create_response(view_model: VMT, *args, response_handler: callable = None, **kwargs) -> ResponseModel:
     async with view_model(*args, **kwargs) as response:
         return response_handler(response) if response_handler else response
 
