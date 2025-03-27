@@ -26,19 +26,19 @@ class EmailController(SMTP):
         self.subject = subject
         self.email_body = email_body
         self.use_tls = use_tls
-        self.message = self.generate_email_message(from_email, to_email, subject, email_body)
+        self.message = self.__generate_email_message(from_email, to_email, subject, email_body)
 
-    def send_email_with_ssl(
+    async def send_email_with_ssl(
             self
     ) -> bool:
         try:
-            self.login(get_settings().SMTP_USERNAME, get_settings().SMTP_PASSWORD)
-            self.sendmail(self.from_email, self.to_email, self.message.as_string())
+            await self.login(get_settings().SMTP_USERNAME, get_settings().SMTP_PASSWORD)
+            await self.sendmail(self.from_email, self.to_email, self.message.as_string())
             return True
         except SMTPException:
             return False
 
-    def generate_email_message(self):
+    def __generate_email_message(self):
         message = MIMEMultipart('alternative')
         message['From'] = self.from_email
         message['To'] = self.to_email
