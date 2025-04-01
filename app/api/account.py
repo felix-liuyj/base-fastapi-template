@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 
 from app.config import Settings, get_settings
 from app.libs.constants import CustomApiRouter
-from app.libs.response import create_response
+from app.response import create_response
 from app.libs.sso.azure import get_user_profile, generate_sso_login_url
 from app.models.account import UserProfile
 from app.response import ResponseModel

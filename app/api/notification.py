@@ -1,7 +1,7 @@
 from fastapi import Request
 
 from app.libs.constants import CustomApiRouter
-from app.libs.response import create_event_stream_response
+from app.response import create_event_stream_response
 from app.response import ResponseModel
 from app.view_models.notification import NotificationGenerateViewModel
 
