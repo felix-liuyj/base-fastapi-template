@@ -20,7 +20,9 @@ class EmailController(SMTP):
             email_body: str = Field(..., description='HTML content of the email 电子邮件的 HTML 内容'),
             use_tls: bool = Field(False, description='Use TLS or not 是否使用 TLS')
     ):
-        super().__init__(get_settings().SMTP_HOST, get_settings().SMTP_PORT, use_tls=use_tls)
+        super().__init__(
+            hostname=get_settings().SMTP_HOST, port=get_settings().SMTP_PORT, use_tls=use_tls
+        )
         self.from_email = from_email
         self.to_email = to_email
         self.subject = subject
@@ -28,10 +30,9 @@ class EmailController(SMTP):
         self.use_tls = use_tls
         self.message = self.__generate_email_message(from_email, to_email, subject, email_body)
 
-    async def send_email_with_ssl(
-            self
-    ) -> bool:
+    async def send_email_with_ssl(self) -> bool:
         try:
+            print(f'Send mail to {self.to_email}')
             await self.login(get_settings().SMTP_USERNAME, get_settings().SMTP_PASSWORD)
             await self.sendmail(self.from_email, self.to_email, self.message.as_string())
             return True

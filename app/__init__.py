@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
         cus_print(f'Encrypt Key: {Fernet.generate_key().decode("utf-8")}, Please save it in config file', 'p')
     print('Load Core Application...')
     await register_routers(app)
-    mongo_client = AsyncIOMotorClient(get_settings().COSMOS_DB_CONNECTION_STRING)
+    mongo_client = await initialize_mongodb_client()
     await init_db(mongo_client)
     print("Startup complete")
     yield
@@ -81,10 +81,20 @@ async def register_routers(app: FastAPI):
     app.include_router(account_router)
 
 
+async def initialize_mongodb_client():
+    return AsyncIOMotorClient(
+        host=get_settings().MONGODB_URI,
+        port=get_settings().MONGODB_PORT,
+        username=get_settings().MONGODB_USERNAME,
+        password=get_settings().MONGODB_PASSWORD,
+        authSource=get_settings().MONGODB_AUTHENTICATION_SOURCE
+    )
+
+
 async def init_db(mongo_client: AsyncIOMotorClient):
     import app.models.account as user_models
     await init_beanie(
-        database=getattr(mongo_client, get_settings().COSMOS_DB_NAME),
+        database=getattr(mongo_client, get_settings().MONGODB_DB),
         document_models=[
             *load_models_class(user_models),
         ]

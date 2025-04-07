@@ -1,5 +1,3 @@
-import re
-
 from redis.asyncio.client import Redis
 
 from app.config import get_settings
@@ -10,17 +8,14 @@ __all__ = (
 
 
 class RedisCacheController(Redis):
-
-    async def __aenter__(self):
-        hp, pwd, ssl_conn, *_ = get_settings().REDIS_CONNECTION_STRING.split(',')
-        host, port = hp.split(':')
-        password, *_ = re.findall('=(.*)', pwd)
-        ssl_conn, *_ = re.findall('=(.*)', ssl_conn)
-        await Redis.__init__(
-            self, host=host, port=port, ssl=bool(ssl_conn.userType()),
-            username='default', password=''.join(password),
+    def __init__(self):
+        super().__init__(
+            host=get_settings().REDIS_HOST, port=get_settings().REDIS_PORT, ssl=False,
+            username=get_settings().REDIS_USERNAME, password=get_settings().REDIS_PASSWORD,
             encoding="utf-8", decode_responses=True
         )
+
+    async def __aenter__(self):
         return self
 
     async def check_email_v_code(self, email: str, v_code: str) -> bool:
@@ -30,7 +25,7 @@ class RedisCacheController(Redis):
     async def increment_redis_count_with_item(self, name: str, item: str, increment: int = 1):
         await self.zincrby(name, increment, item)
 
-    async def increment_redis_count_sequence(self, name: str, sequence: list, increment: int = 1):
+    async def increment_redis_count_with_sequence(self, name: str, sequence: list | set, increment: int = 1):
         for item in sequence:
             await self.zincrby(name, increment, item)
 
