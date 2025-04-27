@@ -3,10 +3,12 @@ import base64
 import math
 from typing import List
 
+import alibabacloud_alb20200616.models as alb_models
 from Tea.exceptions import TeaException
 from alibabacloud_agency20221216 import models as agency_models
 from alibabacloud_agency20221216.client import Client as AgencyClient
 from alibabacloud_agency20221216.models import GetAccountInfoResponseBodyAccountInfoListAccountInfo
+from alibabacloud_alb20200616.client import Client as AlbClient
 from alibabacloud_bssopenapi20171214 import models as bss_models
 # from alibabacloud_ram20150501 import models as ram_models
 # from alibabacloud_sts20150401 import models as sts_models
@@ -29,6 +31,8 @@ from app.models import SupportImageMIMEType, SupportDataMIMEType
 __all__ = (
     'AliCloudOssBucketController',
 )
+
+from app.models.events import EventModel, DomainModeEnum
 
 
 class BaseAliCloudProviderController(BaseCloudProviderController):
@@ -464,3 +468,113 @@ class AliCloudOssBucketController(BaseAliCloudProviderController, Bucket):
     async def generate_object_access_url_async(self, file_path: str, expire: int = 60):
         signed_url = await run_in_threadpool(self.sign_url, method='GET', key=file_path, expires=expire)
         return signed_url
+
+
+class AliCloudALBController(BaseAliCloudProviderController, AlbClient):
+
+    def __init__(self, access_key: str, access_secret: str, region_id: str, result: list | dict = None):
+        BaseAliCloudProviderController.__init__(self, access_key, access_secret, region_id, result)
+
+    async def login(self):
+        config = Config(
+            access_key_id=self._access_key,
+            access_key_secret=self._access_secret,
+            # Endpoint 请参考 https://api.aliyun.com/product/Agency
+            endpoint='alb.cn-hongkong.aliyuncs.com', region_id=self._region_id
+        )
+        AlbClient.__init__(self, config)
+
+    async def add_event_listener(self, event: EventModel, event_domain: str) -> bool:
+        if not await self.query_alb_instance():
+            return False
+        if not await self.query_alb_http_listener():
+            return False
+        return await self.set_event_listener_rule(event, event_domain)
+
+    async def query_alb_instance(self):
+        request = alb_models.GetLoadBalancerAttributeRequest(
+            load_balancer_id=get_settings().ALI_LUMIO_ALB_ID
+        )
+        response = await self.get_load_balancer_attribute_with_options_async(request, self.options)
+        if response.status_code != 200:
+            return None
+        return response.body
+
+    async def query_alb_http_listener(self):
+        request = alb_models.GetListenerAttributeRequest(listener_id=get_settings().ALI_LUMIO_ALB_LISTENER_ID)
+        response = await self.get_listener_attribute_with_options_async(request, self.options)
+        if response.status_code != 200:
+            return None
+        return response.body
+
+    async def set_event_listener_rule(self, event: EventModel, event_domain: str):
+        rule_name = f'{event.name.lower().replace(" ", "-")}-{event.sid}-rule'
+        if event.domainSettings.domainMode == DomainModeEnum.NONE:
+            return await self.add_event_listener_rule(event, event_domain, rule_name)
+        return await self.update_event_listener_rule(event, event_domain)
+
+    async def add_event_listener_rule(self, event: EventModel, event_domain: str, rule_name: str):
+        exists_rule_count = await self.get_listener_rule_count()
+        request = alb_models.CreateRuleRequest(
+            listener_id=get_settings().ALI_LUMIO_ALB_LISTENER_ID,
+            priority=exists_rule_count + 1, rule_name=rule_name
+        )
+        request.rule_conditions = self.generate_rule_conditions(event_domain)
+        request.rule_actions = self.generate_rule_actions(event)
+        request.tag = [alb_models.CreateRuleRequestTag(key='Lumio Event Listener Rule', value=event.sid)]
+        response = await self.create_rule_with_options_async(request, self.options)
+        if response.status_code != 200:
+            return False
+        domain_settings = event.domainSettings
+        domain_settings.domainMode = DomainModeEnum.CUSTOM
+        *sub_domain, domain_name, area = event_domain.split('.')
+        domain_settings.domain = f'{domain_name}.{area}'
+        domain_settings.subDomain = '.'.join(sub_domain) or 'www'
+        domain_settings.ruleId = response.body.rule_id
+        await event.update_fields(domainSettings=domain_settings)
+        return True
+
+    async def update_event_listener_rule(self, event: EventModel, event_domain: str):
+        pass
+
+    async def get_listener_rule_count(self) -> int:
+        request = alb_models.ListRulesRequest(listener_ids=[get_settings().ALI_LUMIO_ALB_LISTENER_ID])
+        response = await self.list_rules_with_options_async(request, self.options)
+        if response.status_code != 200:
+            return 0
+        return response.body.total_count
+
+    @staticmethod
+    def generate_rule_conditions(event_domain: str) -> list[
+        alb_models.CreateRuleRequestRuleConditions
+    ]:
+        return [
+            alb_models.CreateRuleRequestRuleConditions(
+                type='Host', host_config=alb_models.CreateRuleRequestRuleConditionsHostConfig([event_domain])
+            ),
+            alb_models.CreateRuleRequestRuleConditions(
+                type='Path', path_config=alb_models.CreateRuleRequestRuleConditionsPathConfig(['/*'])
+            )
+        ]
+
+    @staticmethod
+    def generate_rule_actions(event: EventModel) -> list[
+        alb_models.CreateRuleRequestRuleActions
+    ]:
+        return [
+            alb_models.CreateRuleRequestRuleActions(
+                order=1, type='Rewrite', rewrite_config=alb_models.CreateRuleRequestRuleActionsRewriteConfig(
+                    path=f'/{event.sid}/en${{path}}', query='${query}', host='${host}'
+                )
+            ),
+            alb_models.CreateRuleRequestRuleActions(
+                order=2, type='ForwardGroup',
+                forward_group_config=alb_models.CreateRulesRequestRulesRuleActionsForwardGroupConfig(
+                    server_group_tuples=[
+                        alb_models.CreateRulesRequestRulesRuleActionsForwardGroupConfigServerGroupTuples(
+                            server_group_id=get_settings().ALI_LUMIO_ALB_EVENT_BACKEND_SERVER_GROUP_ID
+                        )
+                    ]
+                )
+            )
+        ]

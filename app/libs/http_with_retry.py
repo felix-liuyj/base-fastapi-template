@@ -3,6 +3,13 @@ from enum import Enum
 
 from httpx import AsyncClient, TimeoutException, ConnectError, HTTPStatusError, RequestError
 
+__all__ = (
+    'request_get_with_retry',
+    'request_post_with_retry',
+    'request_put_with_retry',
+    'request_delete_with_retry',
+)
+
 
 class RequestMethodEnum(Enum):
     GET = 'GET'
@@ -33,8 +40,8 @@ async def request_with_retry(url, method: RequestMethodEnum, headers=None, param
         for attempt in range(retries):
             try:
                 response = await client.request(method.value, url, headers=headers, params=params, timeout=10)
-                response.raise_for_status()  # 如果 HTTP 状态码 >= 400，抛出异常
-                return response.json()  # 返回解析后的 JSON 数据
+                # 如果 HTTP 状态码 >= 400，抛出异常
+                return response.raise_for_status().json()  # 返回解析后的 JSON 数据
             except TimeoutException:
                 print(f"⚠️ [警告] 请求超时，重试 {attempt + 1}/{retries}...")
             except ConnectError:
