@@ -1,13 +1,13 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar, Iterable
 
 from beanie import Document, Update, after_event
 from beanie.odm.operators.update.general import Set as _Set
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.config import get_settings
-from app.libs.custom import encrypt, decrypt
+from app.libs.custom import encrypt, decrypt, update_dict_value_recursively
 
 __all__ = (
     'Set',
@@ -48,6 +48,9 @@ class SupportImageMIMEType(Enum):
 
 
 class BaseDatabaseModel(Document):
+    # 子类只需在此列出需要加密的字段名
+    __encrypted_fields__: ClassVar[Iterable[str]] = []
+
     createdAt: datetime = Field(default_factory=datetime.now)
     updatedAt: datetime = Field(default_factory=datetime.now)
 
@@ -76,3 +79,12 @@ class BaseDatabaseModel(Document):
         if not getattr(self, encrypted_field):
             return None
         return decrypt(getattr(self, encrypted_field), get_settings().ENCRYPT_KEY)
+
+    @model_validator(mode='before')
+    def decrypt_model_data(cls, values: dict) -> str:
+        for field in cls.__encrypted_fields__:
+            update_dict_value_recursively(
+                values, field,
+                func=lambda x: decrypt(x, get_settings().ENCRYPT_KEY) if x and x.startswith('gAAAA') else None
+            )
+        return values

@@ -8,6 +8,7 @@ import pathlib
 from contextlib import contextmanager, asynccontextmanager
 from datetime import datetime, timedelta
 from socket import socket, AF_INET, SOCK_DGRAM
+from typing import Any
 
 from cryptography.fernet import Fernet
 from jinja2 import Environment, FileSystemLoader
@@ -38,6 +39,8 @@ __all__ = (
     'serialize',
     'deserialize',
     'render_template',
+    'get_dict_value_recursively',
+    'update_dict_value_recursively',
 )
 
 console = Console()
@@ -280,3 +283,34 @@ def render_template(template_name: str, **render_data: dict) -> str:
     template = env.get_template(template_name)
     # Call the template's render method, pass in the data, and get the final document.
     return template.render({'data': render_data})
+
+
+def get_dict_value_recursively(data: dict, path: str, default=None):
+    """根据 'a.b.c' 路径从嵌套 dict 中取值"""
+    current = data
+    for key in path.split("."):
+        if isinstance(current, dict) and key in current:
+            current = current.get(key)
+        else:
+            return default
+    return current
+
+
+def update_dict_value_recursively(data: dict, path: str, value: Any = None, func: callable = None):
+    """
+    根据 'a.b.c' 路径递归更新嵌套 dict 中的值。
+    优先使用 value；若 value 为 None 且 func 可用，则调用 func(old_value) 更新值。
+    """
+    if not (isinstance(data, dict) and path):
+        return
+    if value is None and not callable(func):
+        return
+    current: dict = data
+    *previous_keys, last_key = path.split(".")
+    for key in previous_keys:
+        current = current.get(key)
+        if not isinstance(current, dict):
+            return
+    if last_key not in current:
+        return
+    current |= {last_key: value if value is not None else func(current.get(last_key))}
