@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import pathlib
 import time
@@ -6,7 +8,7 @@ from inspect import isclass
 
 from beanie import init_beanie
 from cryptography.fernet import Fernet
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -26,6 +28,16 @@ __all__ = (
     'create_app',
 )
 
+logger = logging.getLogger("api.requests")
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        # 如果传入的是 dict，会自动 dump 成 JSON 字符串
+        if isinstance(record.msg, dict):
+            record.msg = json.dumps(record.msg, ensure_ascii=False)
+        return super().format(record)
+
 
 def create_app():
     app = FastAPI(lifespan=lifespan)
@@ -41,6 +53,7 @@ def create_app():
         allow_headers=['*'],
         expose_headers=['*']
     )
+    initial_logger()
     register_middlewares(app)
     register_http_exception_handlers(app)
     return app
@@ -67,9 +80,25 @@ def register_middlewares(app: FastAPI):
     @app.middleware("http")
     async def log_request_time(request: Request, call_next):
         start_time = time.time()
-        response = await call_next(request)
-        duration = time.time() - start_time
-        print(f'Request {request.url} took {duration:.2f}s')
+        # 请求信息
+        request_body = await request.body()
+        request_headers = dict(request.headers)
+
+        # 执行请求
+        response: Response = await call_next(request)
+        if request.url.path == '/status':
+            return response
+
+        # 构造日志内容
+        log_data = {
+            "path": request.url.path, "method": request.method,
+            "query_params": dict(request.query_params),
+            "request_body": request_body.decode("utf-8", errors="ignore"),
+            "request_headers": request_headers,
+            "status_code": response.status_code,
+            "process_time_ms": (time.time() - start_time) * 1000,
+        }
+        logger.info(log_data)
         return response
 
 
@@ -93,14 +122,15 @@ async def initialize_mongodb_client():
 
 async def init_db(mongo_client: AsyncIOMotorClient):
     import app.models.account as user_models
+    model_classes = [
+        *load_models_class(user_models),
+    ]
     await init_beanie(
         database=getattr(mongo_client, get_settings().MONGODB_DB),
-        document_models=[
-            *load_models_class(user_models),
-        ]
+        document_models=model_classes
     )
     print('Database Test...')
-    await test_models_class(load_models_class(user_models))
+    await test_models_class(model_classes)
     print('Database Init Complete', end='\n\n')
 
 
@@ -118,6 +148,25 @@ def load_models_class(module):
             class_list.append(module_class)
 
     return class_list
+
+
+def initial_logger() -> logging.Logger:
+    logger.setLevel(logging.INFO)
+
+    # 创建日志目录
+    log_dir = f'{pathlib.Path(__file__).resolve().parent}/statics/logs'
+    os.makedirs(log_dir, exist_ok=True)
+
+    log_file_path = os.path.join(log_dir, 'api-requests.log')
+    handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+
+    formatter = JsonFormatter('%(message)s')  # 只打印 JSON 内容
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.propagate = False  # 不传给上层的 uvicorn logger
+
+    return logger
 
 
 def register_http_exception_handlers(app: FastAPI):
