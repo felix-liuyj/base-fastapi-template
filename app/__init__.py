@@ -16,10 +16,9 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_403_FORBIDDEN,
 
 from app.config import Settings, get_settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
-from app.libs.ctrl.db.mongodb import initialize_mongodb_client
+from app.libs.ctrl.db.mongodb import initialize_database
 from app.libs.custom import cus_print
 from app.libs.sso import SSOProviderEnum
-from app.models import BaseDatabaseModel
 from app.response import ResponseModel
 
 __all__ = (
@@ -66,10 +65,11 @@ async def lifespan(app: FastAPI):
         cus_print(f'Encrypt Key: {Fernet.generate_key().decode("utf-8")}, Please save it in config file', 'p')
     print('Load Core Application...')
     await register_routers(app)
-    mongo_client = await initialize_mongodb_client()
+    client = await initialize_database()
     print("Startup complete")
     yield
-    mongo_client.close()
+    if client:
+        client.close()
     print("Shutdown complete")
 
 

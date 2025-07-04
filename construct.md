@@ -645,7 +645,7 @@ async def lifespan(app: FastAPI):
     
     # 初始化数据库
     mongo_client = await initialize_mongodb_client()
-    await init_db(mongo_client)
+    await initialize_database(mongo_client)
     
     print("Startup complete")
     yield

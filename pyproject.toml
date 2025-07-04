@@ -49,6 +49,8 @@ oss2 = "*"
 motor = "*"
 beanie = "*"
 redis = "*"
+sqlmodel = "*"
+asyncmy = "*"
 
 # 消息队列
 aiokafka = "*"

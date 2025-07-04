@@ -6,8 +6,8 @@ from pydantic import Field, EmailStr
 from pymongo import HASHED
 
 from app.config import get_settings
+from app.libs.ctrl.db.mongodb import BaseDatabaseModel
 from app.libs.custom import decrypt
-from app.models import BaseDatabaseModel
 from app.models import SupportImageMIMEType
 
 __all__ = (

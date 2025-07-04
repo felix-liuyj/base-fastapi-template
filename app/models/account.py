@@ -5,7 +5,8 @@ from beanie import Indexed
 from pydantic import Field, EmailStr, HttpUrl, BaseModel
 from pymongo import ASCENDING
 
-from app.models import BaseDatabaseModel, SupportImageMIMEType
+from app.libs.ctrl.db.mongodb import BaseDatabaseModel
+from app.models import SupportImageMIMEType
 
 __all__ = (
     'UserModel',

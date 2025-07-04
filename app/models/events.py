@@ -5,7 +5,8 @@ from typing import Optional
 from pydantic import Field, BaseModel, EmailStr
 from pymongo import HASHED
 
-from app.models import BaseDatabaseModel, SupportImageMIMEType
+from app.libs.ctrl.db.mongodb import BaseDatabaseModel
+from app.models import SupportImageMIMEType
 from app.models.account import CertificationItemFileType
 
 __all__ = (

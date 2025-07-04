@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     MONGODB_PORT: int
     MONGODB_AUTHENTICATION_SOURCE: str
 
+    MYSQL_USERNAME: str
+    MYSQL_PASSWORD: str
+    MYSQL_HOST: str
+    MYSQL_PORT: int
+    MYSQL_DATABASE: str
+
     KAFKA_CLUSTER_BROKERS: str | None
     KAFKA_CLUSTER_TOPICS: str | None
     KAFKA_CLUSTER_CONSUMER_GROUP: str | None
