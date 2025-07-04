@@ -4,14 +4,11 @@ import os
 import pathlib
 import time
 from contextlib import asynccontextmanager
-from inspect import isclass
 
-from beanie import init_beanie
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
@@ -19,6 +16,7 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_403_FORBIDDEN,
 
 from app.config import Settings, get_settings
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
+from app.libs.ctrl.db.mongodb import initialize_mongodb_client
 from app.libs.custom import cus_print
 from app.libs.sso import SSOProviderEnum
 from app.models import BaseDatabaseModel
@@ -69,7 +67,6 @@ async def lifespan(app: FastAPI):
     print('Load Core Application...')
     await register_routers(app)
     mongo_client = await initialize_mongodb_client()
-    await init_db(mongo_client)
     print("Startup complete")
     yield
     mongo_client.close()
@@ -108,46 +105,6 @@ async def register_routers(app: FastAPI):
 
     app.include_router(root_router)
     app.include_router(account_router)
-
-
-async def initialize_mongodb_client():
-    return AsyncIOMotorClient(
-        host=get_settings().MONGODB_URI,
-        port=get_settings().MONGODB_PORT,
-        username=get_settings().MONGODB_USERNAME,
-        password=get_settings().MONGODB_PASSWORD,
-        authSource=get_settings().MONGODB_AUTHENTICATION_SOURCE
-    )
-
-
-async def init_db(mongo_client: AsyncIOMotorClient):
-    import app.models.account as user_models
-    model_classes = [
-        *load_models_class(user_models),
-    ]
-    await init_beanie(
-        database=getattr(mongo_client, get_settings().MONGODB_DB),
-        document_models=model_classes
-    )
-    print('Database Test...')
-    await test_models_class(model_classes)
-    print('Database Init Complete', end='\n\n')
-
-
-async def test_models_class(module):
-    for model in module:
-        await model.find().to_list()
-        print(f'{model.__name__} test passed')
-
-
-def load_models_class(module):
-    class_list = []
-    for model in module.__all__:
-        module_class = getattr(module, model)
-        if module_class and isclass(module_class) and issubclass(module_class, BaseDatabaseModel):
-            class_list.append(module_class)
-
-    return class_list
 
 
 def initial_logger() -> logging.Logger:
