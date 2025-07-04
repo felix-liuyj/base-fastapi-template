@@ -14,10 +14,10 @@ __all__ = (
     'get_session',
     'initialize_database',
 )
-settings = get_settings()
+
 DATABASE_URL = (
-    f"mysql+asyncmy://{settings.MYSQL_USERNAME}:{settings.MYSQL_PASSWORD}"
-    f"@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
+    f"mysql+asyncmy://{get_settings().MYSQL_USERNAME}:{get_settings().MYSQL_PASSWORD}"
+    f"@{get_settings().MYSQL_HOST}:{get_settings().MYSQL_PORT}/{get_settings().MYSQL_DATABASE}"
 )
 
 engine = create_async_engine(DATABASE_URL, echo=True)
