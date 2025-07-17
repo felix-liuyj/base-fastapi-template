@@ -17,7 +17,9 @@ __all__ = (
     'create_response',
     'create_event_stream_response',
 )
+
 VMT = TypeVar("VMT", bound="BaseViewModel")
+PGItemT = TypeVar('PGItemT')
 
 
 class ResponseModel(BaseModel, Generic[T]):
@@ -29,6 +31,14 @@ class ResponseModel(BaseModel, Generic[T]):
     )
     message: str = Field(..., description='Response Message', examples=['Operating Successfully'])
     data: T = Field(..., description='Response data')
+
+
+class BasePaginationResponseDataType(BaseModel, Generic[PGItemT]):
+    total: int = Field(..., description='Total number of items')
+    pageNo: int = Field(..., description='Current page number')
+    pageSize: int = Field(..., description='Number of items per page')
+    hasMore: bool = Field(..., description='Whether there is a next page')
+    items: list[PGItemT] = Field(..., description='List of items on the current page')
 
 
 class IllegalParametersResponseModel(ResponseModel[list[str]]):
