@@ -7,6 +7,7 @@ from beanie import init_beanie
 from beanie.odm.operators.update.general import Set as _Set
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import Field, model_validator
+from pymongo import AsyncMongoClient
 
 from app.config import get_settings
 from app.libs.custom import encrypt, decrypt, update_dict_value_recursively
@@ -85,12 +86,15 @@ def load_models_class(module):
 async def initialize_database() -> AsyncIOMotorClient:
     import app.models.account as user_models
 
-    mongo_client = AsyncIOMotorClient(
+    mongo_client = AsyncMongoClient(
         host=get_settings().MONGODB_URI,
         port=get_settings().MONGODB_PORT,
         username=get_settings().MONGODB_USERNAME,
         password=get_settings().MONGODB_PASSWORD,
-        authSource=get_settings().MONGODB_AUTHENTICATION_SOURCE
+        authSource=get_settings().MONGODB_AUTHENTICATION_SOURCE,
+        # 全局连接池参数可在此配置
+        # maxPoolSize=100,
+        # minPoolSize=5,
     )
     model_classes = [
         *load_models_class(user_models),
