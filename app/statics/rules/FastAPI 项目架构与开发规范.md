@@ -107,6 +107,27 @@ class VerifyEmailForm(BaseModel):
 - 对敏感字段设置隐藏处理
 - 参数嵌入(embed=True)保持一致性
 
+**命名规范**:
+- **Query和Path参数**: 使用下划线拼接命名法 (snake_case)
+  ```python
+  @router.get('/users')
+  async def get_users(
+      user_id: int = Path(..., description='用户ID'),
+      page_size: int = Query(10, description='页面大小'),
+      sort_order: str = Query('asc', description='排序方式')
+  ):
+      pass
+  ```
+
+- **Body和Form等JSON格式参数**: 使用驼峰命名法 (camelCase)
+  ```python
+  class CreateUserForm(BaseModel):
+      userName: str = Body(..., embed=True, description='用户名')
+      userEmail: str = Body(..., embed=True, description='用户邮箱')
+      firstName: str = Body(..., embed=True, description='名')
+      lastName: str = Body(..., embed=True, description='姓')
+  ```
+
 ### 3.2 API层 (app/api/)
 
 负责路由定义、权限校验和请求处理编排，使用自定义路由器提供增强功能。
@@ -379,6 +400,96 @@ class CustomApiRouter(APIRouter):
       Returns:
           序列化后的JSON字符串
       """
+  ```
+
+#### 6.1.4 函数设计规范
+
+- **函数代码行数限制**: 每个函数代码量尽量不超过20行
+  ```python
+  # 推荐: 简洁的函数实现
+  async def create_user(user_data: dict) -> UserModel:
+      """创建用户"""
+      # 验证数据
+      validated_data = validate_user_data(user_data)
+      
+      # 创建用户实例
+      user = UserModel(**validated_data)
+      
+      # 保存到数据库
+      await user.save()
+      
+      # 发送通知
+      await send_welcome_notification(user.email)
+      
+      return user
+  ```
+
+- **数据初始化分离**: 大量参数的数据类型初始化应提取为独立方法
+  ```python
+  # 推荐: 将复杂的数据初始化提取为独立方法
+  def get_default_user_config() -> dict:
+      """获取默认用户配置"""
+      return {
+          'notification_settings': {
+              'email_enabled': True,
+              'sms_enabled': False,
+              'push_enabled': True,
+          },
+          'privacy_settings': {
+              'profile_visible': True,
+              'email_visible': False,
+              'phone_visible': False,
+          },
+          'feature_flags': {
+              'beta_features': False,
+              'advanced_mode': False,
+              'analytics_enabled': True,
+          }
+      }
+  
+  async def initialize_user_profile(email: str) -> UserProfile:
+      """初始化用户配置文件"""
+      default_config = get_default_user_config()
+      profile = UserProfile(
+          email=email,
+          config=default_config
+      )
+      return profile
+  ```
+
+- **功能封装**: 多余的功能代码封装成通用方法
+  ```python
+  # 推荐: 将通用功能提取为独立方法
+  async def validate_and_hash_password(password: str) -> str:
+      """验证密码强度并生成哈希"""
+      if not is_strong_password(password):
+          raise ValueError("密码强度不够")
+      return hash_password(password)
+  
+  async def send_verification_email(email: str, code: str) -> bool:
+      """发送验证邮件"""
+      template = get_email_template('verification')
+      content = render_template(template, {'code': code})
+      return await send_email(email, '邮箱验证', content)
+  
+  async def create_user_account(user_form: CreateUserForm) -> UserModel:
+      """创建用户账户"""
+      # 验证密码并生成哈希
+      password_hash = await validate_and_hash_password(user_form.password)
+      
+      # 创建用户
+      user = UserModel(
+          email=user_form.email,
+          password_hash=password_hash,
+          status=UserStatusEnum.PENDING_VERIFICATION
+      )
+      await user.save()
+      
+      # 发送验证邮件
+      verification_code = generate_verification_code()
+      await send_verification_email(user.email, verification_code)
+      
+      return user
   ```
 
 ### 6.2 安全编码规范
