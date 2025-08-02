@@ -5,10 +5,10 @@ from fastapi.responses import RedirectResponse
 
 from app.config import Settings, get_settings
 from app.libs.constants import CustomApiRouter
-from app.response import create_response
 from app.libs.sso.azure import get_user_profile, generate_sso_login_url
 from app.models.account import UserProfile
 from app.response import ResponseModel
+from app.response import create_response
 from app.response.account import UserInfoListQueryResponseDataItem
 from app.view_models.account import *
 
@@ -16,9 +16,7 @@ __all__ = (
     'router',
 )
 
-router = CustomApiRouter(
-    prefix='/account', tags=['Account API'], dependencies=[]
-)
+router = CustomApiRouter()
 
 
 @router.get(

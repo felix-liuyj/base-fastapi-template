@@ -9,9 +9,7 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
-from starlette.staticfiles import StaticFiles
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_403_FORBIDDEN, HTTP_401_UNAUTHORIZED
 
 from app.config import Settings, get_settings
@@ -22,10 +20,11 @@ from app.libs.sso import SSOProviderEnum
 from app.response import ResponseModel
 
 __all__ = (
-    'create_app',
+    'lifespan',
+    'initial_logger',
+    'register_middlewares',
+    'register_http_exception_handlers',
 )
-
-logger = logging.getLogger("api.requests")
 
 
 class JsonFormatter(logging.Formatter):
@@ -36,35 +35,20 @@ class JsonFormatter(logging.Formatter):
         return super().format(record)
 
 
-def create_app():
-    app = FastAPI(lifespan=lifespan)
-    statis_path = f'{pathlib.Path(__file__).resolve().parent}/statics'
-    if not os.path.exists(statis_path):
-        os.mkdir(statis_path)
-    app.mount("/statics", StaticFiles(directory=statis_path), name="statics")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_credentials=True,
-        allow_origins=['*'],
-        allow_methods=['*'],
-        allow_headers=['*'],
-        expose_headers=['*']
-    )
-    initial_logger()
-    register_middlewares(app)
-    register_http_exception_handlers(app)
-    return app
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler for FastAPI application.
+    :param app:
+    :return:
+    """
+    print(app.routes)
     print('Check Env Config:')
     print(dict(get_settings()))
     print('Check Encrypt Key...')
     if not get_settings().ENCRYPT_KEY:
         cus_print(f'Encrypt Key: {Fernet.generate_key().decode("utf-8")}, Please save it in config file', 'p')
     print('Load Core Application...')
-    await register_routers(app)
     client = await initialize_database()
     print("Startup complete")
     yield
@@ -73,7 +57,7 @@ async def lifespan(app: FastAPI):
     print("Shutdown complete")
 
 
-def register_middlewares(app: FastAPI):
+def register_middlewares(app: FastAPI, logger: logging.Logger = None):
     @app.middleware("http")
     async def log_request_time(request: Request, call_next):
         start_time = time.time()
@@ -99,15 +83,7 @@ def register_middlewares(app: FastAPI):
         return response
 
 
-async def register_routers(app: FastAPI):
-    from app.api import router as root_router
-    from app.api.account import router as account_router
-
-    app.include_router(root_router)
-    app.include_router(account_router)
-
-
-def initial_logger() -> logging.Logger:
+def initial_logger(logger: logging.Logger) -> logging.Logger:
     logger.setLevel(logging.INFO)
 
     # 创建日志目录

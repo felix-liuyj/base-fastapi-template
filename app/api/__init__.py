@@ -14,9 +14,7 @@ __all__ = (
     'router',
 )
 
-router = CustomApiRouter(
-    prefix='', tags=['Root API'], dependencies=[]
-)
+router = CustomApiRouter()
 
 
 @router.get("/status", response_model=ResponseModel[StatusResponseData])
