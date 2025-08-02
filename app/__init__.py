@@ -36,13 +36,11 @@ class JsonFormatter(logging.Formatter):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     """
     Lifespan event handler for FastAPI application.
-    :param app:
     :return:
     """
-    print(app.routes)
     print('Check Env Config:')
     print(dict(get_settings()))
     print('Check Encrypt Key...')
