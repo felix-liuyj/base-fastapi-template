@@ -1,6 +1,8 @@
 import abc
+import csv
 import json
 from datetime import datetime
+from io import StringIO
 
 from dateutil.relativedelta import relativedelta
 from faker.proxy import Faker
@@ -8,9 +10,9 @@ from fastapi import Request, BackgroundTasks, UploadFile
 from httpx import TimeoutException
 
 from app.config import get_settings
-from app.libs.ctrl.db import RedisCacheController
-from app.libs.ctrl.cloud import AzureBlobController, AzureBlobUploadResult
 from app.libs.constants import ResponseStatusCodeEnum, get_response_message
+from app.libs.ctrl.cloud import AzureBlobController, AzureBlobUploadResult
+from app.libs.ctrl.db import RedisCacheController
 from app.libs.custom import cus_print
 from app.models import SupportImageMIMEType
 from app.models.account import UserModel, UserProfile, AdminRoleEnum, AdminProfile, AdminModel, UserTypeEnum
@@ -36,7 +38,7 @@ class ViewModelRequestException(ViewModelException):
         super().__init__(message)
 
 
-class BaseViewModel(RedisCacheController):
+class BaseViewModel:
 
     def __init__(
             self, request: Request = None, user_profile: UserProfile | AdminProfile = None,
@@ -188,7 +190,7 @@ class BaseViewModel(RedisCacheController):
     @staticmethod
     def get_last_times(
             num: int, category: str = 'month', date: datetime = None, reverse: bool = False
-    ) -> list[str, ...]:
+    ) -> list[str]:
         latest_cycle_list = []
         current_date = date if date else datetime.now()
         for i in range(num):
@@ -201,6 +203,18 @@ class BaseViewModel(RedisCacheController):
         if reverse:
             latest_cycle_list.reverse()
         return latest_cycle_list
+
+    @staticmethod
+    async def export_to_csv(headers: list[str], rows: list) -> StringIO:
+        """生成CSV数据"""
+        output = StringIO()
+        output.write('\ufeff')  # UTF-8 BOM for Excel compatibility
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+
+        return output
 
 
 class BaseAdminViewModel(BaseViewModel):
