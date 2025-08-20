@@ -101,6 +101,7 @@ class VerifyEmailForm(BaseModel):
 ```
 
 **最佳实践**:
+
 - 每个请求参数都应定义类型
 - 使用Body、Query、Path等进行详细配置
 - 提供参数描述和示例值
@@ -108,6 +109,7 @@ class VerifyEmailForm(BaseModel):
 - 参数嵌入(embed=True)保持一致性
 
 **命名规范**:
+
 - **Query和Path参数**: 使用下划线拼接命名法 (snake_case)
   ```python
   @router.get('/users')
@@ -138,18 +140,20 @@ router = CustomApiRouter(
     prefix='', tags=['Root API'], dependencies=[]
 )
 
+
 # 在 app/api/account.py 中使用
 @router.get(
     '/user', response_model=ResponseModel[UserProfile], description='Get user info'
 )
 async def get_user_info(
-    request: Request,
-    user_profile: Annotated[UserProfile, Depends(get_user_profile)]
+        request: Request,
+        user_profile: Annotated[UserProfile, Depends(get_user_profile)]
 ):
     return await create_response(UserInfoQueryViewModel, request, user_profile)
 ```
 
 **最佳实践**:
+
 - 使用CustomApiRouter而非标准APIRouter (定义在 app/libs/constants.py 中)
 - 路径遵循RESTful设计规范
 - 所有端点必须包含description
@@ -174,12 +178,14 @@ class UserInfoQueryViewModel(BaseViewModel):
 ```
 
 **核心特性**:
+
 - 通过`__aenter__`和`__aexit__`实现异步上下文管理 (在 app/view_models/__init__.py 的 BaseViewModel 中定义)
 - 标准化生命周期：初始化 -> before() -> 操作 -> after()
 - 内置状态管理和错误处理机制
 - 丰富的响应方法：operating_successfully(), operating_failed()等
 
 **标准化响应方法**:
+
 ```python
 # 在 app/view_models/__init__.py 中定义
 def operating_successfully(self, data: str | dict | list, handled: bool = False):
@@ -202,20 +208,21 @@ class UserModel(BaseDatabaseModel):
     password_hash: str = Field(..., description='User password hash')
     status: UserStatusEnum = Field(UserStatusEnum.NEEDS_APPROVAL, description='User status')
     userType: UserTypeEnum = Field(UserTypeEnum.BUYER, description='User type')
-    
+
     class Settings:
         name = 'users'
         indexes = [
             [('email', 1)],
             [('_id', HASHED)]
         ]
-        
+
     @property
     def information(self):
         return self.model_dump(exclude=['password_hash'])
 ```
 
 **最佳实践**:
+
 - 所有字段都应有类型注解和描述
 - 使用类属性Settings配置集合名称和索引
 - 通过property方法扩展模型功能
@@ -233,7 +240,7 @@ class UserModel(BaseDatabaseModel):
 class ResponseModel(BaseModel, Generic[T]):
     category: str = Field(..., description='平台标识符', examples=['00'])
     code: ResponseStatusCodeEnum = Field(..., description='响应状态码')
-    message: str = Field(..., description='响应消息') 
+    message: str = Field(..., description='响应消息')
     data: T = Field(..., description='响应数据')
 ```
 
@@ -243,16 +250,16 @@ class ResponseModel(BaseModel, Generic[T]):
 # 在 app/libs/constants.py 中定义
 class ResponseStatusCodeEnum(Enum):
     OPERATING_SUCCESSFULLY = '0000'  # 操作成功
-    EMPTY_CONTENT = '0001'           # 内容为空
-    NOTHING_CHANGED = '0002'         # 未发生变化
-    OPERATING_FAILED = '2000'        # 操作失败
-    ILLEGAL_PARAMETERS = '2001'      # 非法参数
-    UNAUTHORIZED = '2002'            # 未授权
-    FORBIDDEN = '2003'               # 禁止访问
-    NOT_FOUND = '2004'               # 未找到
-    METHOD_NOT_ALLOWED = '2005'      # 方法不允许
-    REQUEST_TIMEOUT = '2006'         # 请求超时
-    SYSTEM_ERROR = '3000'            # 系统错误
+    EMPTY_CONTENT = '0001'  # 内容为空
+    NOTHING_CHANGED = '0002'  # 未发生变化
+    OPERATING_FAILED = '2000'  # 操作失败
+    ILLEGAL_PARAMETERS = '2001'  # 非法参数
+    UNAUTHORIZED = '2002'  # 未授权
+    FORBIDDEN = '2003'  # 禁止访问
+    NOT_FOUND = '2004'  # 未找到
+    METHOD_NOT_ALLOWED = '2005'  # 方法不允许
+    REQUEST_TIMEOUT = '2006'  # 请求超时
+    SYSTEM_ERROR = '3000'  # 系统错误
 ```
 
 ### 4.3 响应创建工具函数
@@ -286,6 +293,7 @@ async def create_event_stream_response(view_model: VMT, *args, **kwargs) -> Stre
 # 在 app/view_models/__init__.py 中定义
 class ViewModelException(Exception):
     pass
+
 
 class ViewModelRequestException(ViewModelException):
     def __init__(self, message: str):
@@ -327,8 +335,8 @@ async def custom_validation_exception_handler(exc: RequestValidationError):
 class CustomApiRouter(APIRouter):
     def api_route(self, *args, **kwargs):
         responses = {
-            422: { 'description': 'Illegal Parameters', 'model': IllegalParametersResponseModel },
-            500: { 'description': 'Internal Server Error', 'model': InternalServerErrorResponseModel }
+            422: {'description': 'Illegal Parameters', 'model': IllegalParametersResponseModel},
+            500: {'description': 'Internal Server Error', 'model': InternalServerErrorResponseModel}
         }
         kwargs.update(responses=responses)
         return super().api_route(*args, **kwargs)
@@ -679,8 +687,8 @@ self.system_error(message)
 ```python
 # 在 app/view_models/__init__.py 的 BaseViewModel 中定义
 def __init__(
-    self, request: Request = None, user_profile: UserProfile = None, 
-    access_title: list[UserTypeEnum] = None, bg_tasks: BackgroundTasks = None
+        self, request: Request = None, user_profile: UserProfile = None,
+        access_title: list[UserTypeEnum] = None, bg_tasks: BackgroundTasks = None
 ):
     super().__init__()
     self.request = request
@@ -725,19 +733,19 @@ access_url = await self.generate_access_url(file_path)
 # 在 main.py 中定义
 def create_app():
     app = FastAPI(lifespan=lifespan)
-    
+
     # 静态文件挂载
     app.mount("/statics", StaticFiles(directory=statis_path), name="statics")
-    
+
     # 中间件注册
     app.add_middleware(CORSMiddleware, allow_origins=['*'], ...)
-    
+
     # 注册自定义中间件
     register_middlewares(app)
-    
+
     # 注册异常处理器
     register_http_exception_handlers(app)
-    
+
     return app
 ```
 
@@ -749,17 +757,17 @@ def create_app():
 async def lifespan(app: FastAPI):
     # 启动时操作
     print('Check Env Config:', dict(get_settings()))
-    
+
     # 注册路由
     await register_routers(app)
-    
+
     # 初始化数据库
     mongo_client = await initialize_mongodb_client()
     await init_db(mongo_client)
-    
+
     print("Startup complete")
     yield
-    
+
     # 关闭时操作
     mongo_client.close()
     print("Shutdown complete")
@@ -797,12 +805,12 @@ class Settings(BaseSettings):
     APP_NAME: str
     APP_NO: str
     APP_ENV: str
-    
+
     # 数据库配置
     MONGODB_URI: str
     MONGODB_USERNAME: str
     MONGODB_PASSWORD: str
-    
+
     # 缓存配置
     REDIS_HOST: str
     REDIS_PORT: int
@@ -811,6 +819,7 @@ class Settings(BaseSettings):
 ### 8.3 CI/CD配置
 
 项目支持多种CI/CD工具，配置文件位于ci-cd目录:
+
 - GitHub Actions: ci-cd/github-actions/workflows/
 - GitLab CI: ci-cd/gitlab-actions/
 - Jenkins: ci-cd/Jenkinsfile
@@ -820,7 +829,7 @@ class Settings(BaseSettings):
 name: Build and Deploy
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -832,58 +841,271 @@ jobs:
           python-version: "3.13"
 ```
 
-## 9. 安全性考虑
+## 9. Git 提交规范
 
-### 9.1 身份验证与授权
+### 9.1 推荐格式（Conventional Commits）
+
+```
+<type>(<scope>)!: <subject>           # 最多50字符，祈使句，首字母小写，勿结尾句号
+                                      # 如有破坏性变更，加 "!"
+<BLANK LINE>
+<body>                                # 每行≤72字符，说明动机与变更细节、方案取舍
+<BLANK LINE>
+<footer>                              # 关联 issue、破坏性变更、共同作者等
+```
+
+### 9.2 常用 type（团队可白名单化）
+
+- **feat**：新增功能（触发 *minor*）
+- **fix**：缺陷修复（触发 *patch*）
+- **docs**：仅文档
+- **style**：格式（不影响逻辑，如空格、分号、格式化）
+- **refactor**：重构（无功能变更、无修复）
+- **perf**：性能优化
+- **test**：测试相关
+- **build**：构建系统或外部依赖（npm、poetry、docker 等）
+- **ci**：CI 配置
+- **chore**：杂项（不影响 src 或测试）
+- **revert**：回滚
+
+### 9.3 scope 建议
+
+- 选填，指明影响模块，例如：`auth`、`api/user`、`db`、`deps`、`infra`、`ui`
+- 单一 scope，必要时使用多条提交代替"大杂烩"
+
+### 9.4 footer 约定
+
+- 关联：`Refs #123`，`Closes #123` / `Fixes #123`
+- 破坏性：`BREAKING CHANGE: user.profile 字段重命名为 user.bio`
+- 共同作者：`Co-authored-by: Name <email>`
+- DCO：`Signed-off-by: Name <email>`
+
+### 9.5 提交示例
+
+#### 9.5.1 功能新增（含中文说明）
+
+```
+feat(auth): 支持 OAuth2 PKCE 登录
+
+为 web 客户端增加基于 PKCE 的授权码流程，避免在浏览器环境中暴露 client_secret。
+包含 token 刷新与错误码统一处理。
+
+验证：本地与 dev 环境通过登录、刷新、登出用例；新增 e2e 用例。
+Refs #482
+```
+
+#### 9.5.2 修复缺陷并关闭 Issue
+
+```
+fix(api/user): 修正分页参数越界导致 500
+
+问题：page < 1 或 pageSize > 1000 时触发未捕获异常。
+方案：参数归一化 + 上限限制 + 统一错误响应。
+
+测试：新增单元测试覆盖边界；灰度验证通过。
+Closes #519
+```
+
+#### 9.5.3 破坏性变更
+
+```
+refactor(db)!: 统一主键为 uuid v7
+
+BREAKING CHANGE: 所有表 id 改为 uuid v7，旧的自增 id 下线。
+迁移脚本见 migrations/2025-08-20-uuid.sql。
+```
+
+#### 9.5.4 回滚
+
+```
+revert: feat(search): 引入向量召回
+
+原因：线上 QPS 异常与召回不稳定，回滚至 d4d2c1e。
+Reverts commit a1b2c3d.
+```
+
+### 9.6 Git Message 模板
+
+项目提供了标准化的 Git 提交消息模板，帮助团队成员编写规范的提交信息。
+
+#### 9.6.1 模板文件位置
+
+- **全局模板**: `app/statics/rules/.gitmessage.txt`
+- **项目级配置**: 在项目根目录执行以下命令应用模板
+
+#### 9.6.2 配置使用方法
+
+**方法一：项目级配置（推荐）**
+
+```bash
+# 在项目根目录执行
+git config commit.template app/statics/rules/.gitmessage.txt
+
+# 验证配置
+git config --get commit.template
+```
+
+**方法二：全局配置**
+
+```bash
+# 复制模板到全局位置
+cp app/statics/rules/.gitmessage.txt ~/.gitmessage
+
+# 设置全局模板
+git config --global commit.template ~/.gitmessage
+
+# 验证配置
+git config --global --get commit.template
+```
+
+#### 9.6.3 使用模板提交
+
+配置完成后，执行 `git commit` 命令会自动打开编辑器并加载模板：
+
+```bash
+# 标准提交流程
+git add .
+git commit  # 会自动加载模板
+
+# 或者直接指定消息（跳过模板）
+git commit -m "feat(auth): 支持 OAuth2 PKCE 登录"
+```
+
+#### 9.6.4 模板内容
+
+```
+# <type>(<scope>): <subject>
+#  - type: feat | fix | docs | style | refactor | perf | test | build | ci | chore | revert
+#  - scope: 可选，表示影响范围，如 auth、db、api/user
+#  - subject: 不超过50字符，祈使句（如：add、fix、refactor），不以句号结尾
+
+# Body: 描述为什么改、改了什么、如何验证
+# 每行不超过72字符，详细说明动机、变更点与取舍
+
+# Footer:
+# - 关联 Issue: Refs #123 / Closes #123
+# - 破坏性变更: BREAKING CHANGE: xxx
+# - 共同作者: Co-authored-by: Name <email>
+# - DCO: Signed-off-by: Name <email>
+
+# -------------------- 提交示例 --------------------
+# feat(auth): 支持 OAuth2 PKCE 登录
+#
+# 为 web 客户端增加基于 PKCE 的授权码流程，避免在浏览器环境中暴露 client_secret。
+# 包含 token 刷新与错误码统一处理。
+#
+# 验证：本地与 dev 环境通过登录、刷新、登出用例；新增 e2e 用例。
+# Refs #482
+#
+# -------------------------------------------------
+```
+
+#### 9.6.5 IDE 集成配置
+
+**VS Code 配置**
+
+在 `.vscode/settings.json` 中添加：
+
+```json
+{
+  "git.inputValidationLength": 50,
+  "git.inputValidationSubjectLength": 50,
+  "git.useCommitInputAsStashMessage": true
+}
+```
+
+**JetBrains IDEs (PyCharm/WebStorm)**
+
+1. 打开 `Settings/Preferences > Version Control > Git`
+2. 勾选 `Use commit message template`
+3. 设置路径为 `app/statics/rules/.gitmessage.txt`
+
+#### 9.6.6 团队协作建议
+
+1. **强制使用模板**：在 `.pre-commit-hooks.yaml` 中添加提交消息检查
+2. **PR 合并规范**：确保 PR 标题遵循 Conventional Commits 格式
+3. **自动化检查**：使用 `commitizen` 或 `conventional-changelog` 工具
+4. **培训新成员**：确保团队成员了解模板使用方法
+
+#### 9.6.7 常见问题解决
+
+**问题 1：模板不生效**
+
+```bash
+# 检查配置
+git config --get commit.template
+
+# 重新设置
+git config commit.template app/statics/rules/.gitmessage.txt
+```
+
+**问题 2：编辑器不自动打开**
+
+```bash
+# 设置默认编辑器
+git config --global core.editor "code --wait"  # VS Code
+git config --global core.editor "vim"          # Vim
+```
+
+**问题 3：模板路径错误**
+
+```bash
+# 使用绝对路径
+git config commit.template "$(pwd)/app/statics/rules/.gitmessage.txt"
+```
+
+## 10. 安全性考虑
+
+### 10.1 身份验证与授权
 
 - 使用Azure SSO进行身份验证 (在 app/libs/sso/azure.py 中实现)
 - 使用JWT令牌保持会话
 - 基于角色的访问控制
 
-### 9.2 数据安全
+### 10.2 数据安全
 
 - 密码哈希存储
 - 敏感数据加密
 - HTTPS传输
 
-### 9.3 安全最佳实践
+### 10.3 安全最佳实践
 
 - 所有输入都进行验证
 - 防止SQL注入
 - 定期安全审计
 - 最小权限原则
 
-## 10. 性能优化
+## 11. 性能优化
 
-### 10.1 数据库优化
+### 11.1 数据库优化
 
 - 合理使用索引
 - 异步数据库操作
 - 结果分页
 
-### 10.2 缓存策略
+### 11.2 缓存策略
 
 - Redis缓存频繁访问数据 (使用 app/libs/ctrl/db/redis.py 中的RedisCacheController)
 - 合理设置缓存过期时间
 
-### 10.3 异步并发
+### 11.3 异步并发
 
 - 使用asyncio.gather并发执行任务
 - 避免阻塞主事件循环
 
-## 11. 测试策略
+## 12. 测试策略
 
-### 11.1 单元测试
+### 12.1 单元测试
 
 - 测试各层独立功能
 - 使用Mock隔离依赖
 
-### 11.2 集成测试
+### 12.2 集成测试
 
 - 测试各层交互
 - API端到端测试
 
-### 11.3 负载测试
+### 12.3 负载测试
 
 - 性能基准测试
 - 并发用户模拟
