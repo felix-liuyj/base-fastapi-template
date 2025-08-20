@@ -186,7 +186,101 @@ class UserModel(Document):
 
 ---
 
-## 7. 管理与流程（与《技术主管管理条例》对齐）
+## 7. Git 提交规范（Conventional Commits）
+
+### 7.1 提交格式
+
+```
+<type>(<scope>)!: <subject>           # 最多50字符，祈使句，首字母小写，勿结尾句号
+                                      # 如有破坏性变更，加 "!"
+<BLANK LINE>
+<body>                                # 每行≤72字符，说明动机与变更细节、方案取舍
+<BLANK LINE>
+<footer>                              # 关联 issue、破坏性变更、共同作者等
+```
+
+### 7.2 常用 type
+
+- **feat**：新增功能（触发 *minor*）
+- **fix**：缺陷修复（触发 *patch*）
+- **docs**：仅文档
+- **style**：格式（不影响逻辑，如空格、分号、格式化）
+- **refactor**：重构（无功能变更、无修复）
+- **perf**：性能优化
+- **test**：测试相关
+- **build**：构建系统或外部依赖（npm、poetry、docker 等）
+- **ci**：CI 配置
+- **chore**：杂项（不影响 src 或测试）
+- **revert**：回滚
+
+### 7.3 scope 建议
+
+- 选填，指明影响模块，例如：`auth`、`api/user`、`db`、`deps`、`infra`、`ui`
+- 单一 scope，必要时使用多条提交代替"大杂烩"
+
+### 7.4 footer 约定
+
+- 关联：`Refs #123`，`Closes #123` / `Fixes #123`
+- 破坏性：`BREAKING CHANGE: user.profile 字段重命名为 user.bio`
+- 共同作者：`Co-authored-by: Name <email>`
+- DCO：`Signed-off-by: Name <email>`
+
+### 7.5 提交示例
+
+**功能新增**：
+```
+feat(auth): 支持 OAuth2 PKCE 登录
+
+为 web 客户端增加基于 PKCE 的授权码流程，避免在浏览器环境中暴露 client_secret。
+包含 token 刷新与错误码统一处理。
+
+验证：本地与 dev 环境通过登录、刷新、登出用例；新增 e2e 用例。
+Refs #482
+```
+
+**修复缺陷**：
+```
+fix(api/user): 修正分页参数越界导致 500
+
+问题：page < 1 或 pageSize > 1000 时触发未捕获异常。
+方案：参数归一化 + 上限限制 + 统一错误响应。
+
+测试：新增单元测试覆盖边界；灰度验证通过。
+Closes #519
+```
+
+**破坏性变更**：
+```
+refactor(db)!: 统一主键为 uuid v7
+
+BREAKING CHANGE: 所有表 id 改为 uuid v7，旧的自增 id 下线。
+迁移脚本见 migrations/2025-08-20-uuid.sql。
+```
+
+### 7.6 Git Message 模板使用
+
+**配置项目级模板**：
+```bash
+# 在项目根目录执行
+git config commit.template app/statics/rules/.gitmessage.txt
+
+# 验证配置
+git config --get commit.template
+```
+
+**使用模板提交**：
+```bash
+# 标准提交流程
+git add .
+git commit  # 会自动加载模板
+
+# 或者直接指定消息（跳过模板）
+git commit -m "feat(auth): 支持 OAuth2 PKCE 登录"
+```
+
+---
+
+## 8. 管理与流程（与《技术主管管理条例》对齐）
 
 - **Story → Tech Task**：48 小时内拆分至代码/单测/文档/部署脚本；PR 关联 Task ID。
 - **测试**：本地 `pytest`；合并触发 Apifox Runner；Lark 通知测试报告。
@@ -201,7 +295,7 @@ class UserModel(Document):
 
 ---
 
-## 8. 质量与风险控制
+## 9. 质量与风险控制
 
 - **Secret 管控**：示例化；实际部署引用 CI/CD Secret；严禁明文落库/日志。
 - **性能基线**：
@@ -211,7 +305,7 @@ class UserModel(Document):
 
 ---
 
-## 9. 自检清单（回答前后各执行一次）
+## 10. 自检清单（回答前后各执行一次）
 
 - [ ] 已读取并对齐：本 CLAUDE.md + 历史会话 + 上传规范。
 - [ ] 输出结构完整：结论/步骤/注意/清单/增强。
@@ -222,7 +316,7 @@ class UserModel(Document):
 
 ---
 
-## 10. 维护与演进
+## 11. 维护与演进
 
 - 本文件作为 `/memory` 全局规范，**优先级高**。若与个别对话临时指令冲突：
   1. 明确提示冲突点；
